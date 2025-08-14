@@ -1,0 +1,52 @@
+# EXISTING CORE DEPENDENCIES
+fastapi
+uvicorn[standard]
+requests
+python-multipart
+pydantic
+python-jose[cryptography]
+passlib[bcrypt]
+
+# NEW PHASE 2 DEPENDENCIES
+# Database & ORM
+sqlalchemy
+alembic
+
+# File Processing
+pandas
+openpyxl
+xlrd
+
+# Template Engine
+jinja2
+
+# Phone Number Validation
+phonenumbers
+python-magic
+chardet
+
+# Background Tasks (Optional)
+celery
+redis
+
+# Async Operations
+aiofiles
+websockets
+
+# Utilities
+python-dotenv
+click
+
+# Development & Testing (Optional)
+pytest
+pytest-asyncio
+
+# Additional dependencies for modules
+email-validator
+pyjwt
+
+# AI/LLM dependencies
+litellm
+
+# Payment processing
+stripe

@@ -1,0 +1,5 @@
+phone_number,formatted_phone,country_code,country_name,saved_name,public_name,is_my_contact,is_business,is_blocked,is_admin,is_super_admin,labels,last_msg_text,last_msg_date,last_msg_type,last_msg_status
++1 7253470959,+1 7253470959,+1,United States/Canada,John Doe,V,true,false,false,false,false,,,,,
++234 8165440421,+234 8165440421,+234,Nigeria,,,false,false,false,false,false,,,,,
++23274960198,+23274960198,,,23274960198,,true,false,false,false,false,,,,,
++234 9048299702,+234 9048299702,+234,Nigeria,,,false,false,false,false,false,,,,,

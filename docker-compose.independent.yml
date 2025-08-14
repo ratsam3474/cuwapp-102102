@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Landing Page - Port 5500
+  landing:
+    image: stainlessman/cuwhapp-landing:latest
+    container_name: cuwhapp-landing
+    ports:
+      - "5500:5500"    # Landing page on port 5500
+    environment:
+      - NODE_ENV=production
+      - PORT=5500
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_AUTH_URL=http://174.138.55.42:5502
+      - NEXT_PUBLIC_API_URL=http://174.138.55.42:8000
+      - NEXT_PUBLIC_LANDING_URL=http://174.138.55.42
+      - NEXT_PUBLIC_ADMIN_URL=http://174.138.55.42:8001
+    restart: unless-stopped
+
+  # Auth Service - Independent on port 5502
+  auth:
+    image: stainlessman/cuwhapp-auth:latest
+    container_name: cuwhapp-auth
+    ports:
+      - "5502:5502"
+    environment:
+      - NODE_ENV=production
+      - PORT=5502
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_AUTH_URL=http://174.138.55.42:5502
+      - NEXT_PUBLIC_API_URL=http://174.138.55.42:8000
+      - NEXT_PUBLIC_LANDING_URL=http://174.138.55.42
+      - NEXT_PUBLIC_ADMIN_URL=http://174.138.55.42:8001
+    restart: unless-stopped
+
+  # API/Dashboard - Independent on port 8000
+  api:
+    image: stainlessman/cuwhapp-api:latest
+    container_name: cuwhapp-api
+    ports:
+      - "8000:8000"
+    environment:
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - WAHA_BASE_URL=http://174.138.55.42:4500
+      - DO_WAHA_FUNCTION_URL=${DO_WAHA_FUNCTION_URL}
+      - DOCKER_DROPLET_IP=174.138.55.42
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Admin Dashboard - Independent on port 8001
+  admin:
+    image: stainlessman/cuwhapp-admin:latest
+    container_name: cuwhapp-admin
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - API_URL=http://174.138.55.42:8000
+      - ADMIN_SECRET_CODE=${ADMIN_SECRET_CODE}
+    restart: unless-stopped
+
+  # Redis - On port 6379
+  redis:
+    image: redis:7-alpine
+    container_name: cuwhapp-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  # WAHA Free Instance - On port 4500
+  waha-free:
+    image: devlikeapro/waha-plus:latest
+    container_name: cuwhapp-waha-free
+    ports:
+      - "4500:3000"
+    environment:
+      - WAHA_PRINT_QR=false
+      - WAHA_LOG_LEVEL=info
+    restart: unless-stopped

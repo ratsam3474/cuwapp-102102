@@ -1,0 +1,9 @@
+# WAHA Manager Dependencies
+docker==7.0.0
+asyncio-mqtt==0.16.1
+sqlalchemy==1.4.48
+psycopg2-binary==2.9.9
+fastapi==0.104.1
+uvicorn==0.24.0
+redis==5.0.1
+aioredis==2.0.1

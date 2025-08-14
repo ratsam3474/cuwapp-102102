@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upgrade Plan - CuWhapp</title>
+    
+    <!-- Hyperswitch SDK -->
+    <script src="https://beta.hyperswitch.io/v1/HyperLoader.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .plan-selector {
+            margin-bottom: 25px;
+        }
+        
+        .plan-selector label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .plan-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .plan-btn {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .plan-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .plan-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .plan-btn .name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .plan-btn .price {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .plan-btn .price span {
+            font-size: 12px;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+        
+        #payment-widget {
+            min-height: 300px;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        #payment-widget.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Upgrade Your Plan</h1>
+            <p>Choose a plan and complete payment securely</p>
+        </div>
+        
+        <div class="content">
+            <div class="plan-selector">
+                <label>Select Your Plan</label>
+                <div class="plan-buttons">
+                    <button class="plan-btn" data-plan="starter">
+                        <div class="name">Starter</div>
+                        <div class="price">$7<span>/mo</span></div>
+                    </button>
+                    <button class="plan-btn active" data-plan="hobby">
+                        <div class="name">Hobby</div>
+                        <div class="price">$20<span>/mo</span></div>
+                    </button>
+                    <button class="plan-btn" data-plan="pro">
+                        <div class="name">Pro</div>
+                        <div class="price">$45<span>/mo</span></div>
+                    </button>
+                    <button class="plan-btn" data-plan="premium">
+                        <div class="name">Premium</div>
+                        <div class="price">$99<span>/mo</span></div>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="payment-widget" class="loading">
+                <div class="spinner"></div>
+            </div>
+            
+            <button id="pay-btn" class="submit-btn" disabled>
+                Complete Payment - $20
+            </button>
+            
+            <div id="message" class="message"></div>
+        </div>
+        
+        <div class="footer">
+            <a href="/">← Back to Dashboard</a>
+        </div>
+    </div>
+    
+    <!-- Include dependencies -->
+    <script src="/static/js/user-cache.js"></script>
+    <script src="/static/js/payment-compact.js"></script>
+    
+    <script>
+        // Initialize payment handler
+        const payment = new CompactPayment();
+        let selectedPlan = 'hobby'; // Default plan
+        
+        // Handle plan selection
+        document.querySelectorAll('.plan-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                // Update UI
+                document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update selected plan
+                selectedPlan = this.dataset.plan;
+                const planDetails = payment.getPlanDetails(selectedPlan);
+                
+                // Update button text
+                document.getElementById('pay-btn').textContent = `Complete Payment - $${planDetails.price}`;
+                
+                // Reinitialize payment widget with new plan
+                await initializePayment();
+            });
+        });
+        
+        // Initialize payment on load
+        async function initializePayment() {
+            try {
+                // Get user from cache
+                const user = UserCache.getUser();
+                if (!user) {
+                    showMessage('Please sign in to continue', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/sign-in';
+                    }, 2000);
+                    return;
+                }
+                
+                // Show loading state
+                document.getElementById('payment-widget').className = 'loading';
+                document.getElementById('payment-widget').innerHTML = '<div class="spinner"></div>';
+                document.getElementById('pay-btn').disabled = true;
+                
+                // Initialize payment with selected plan
+                await payment.init(selectedPlan, user.id, user.email);
+                
+                // Remove loading state
+                document.getElementById('payment-widget').className = '';
+                document.getElementById('pay-btn').disabled = false;
+                
+            } catch (error) {
+                console.error('Failed to initialize payment:', error);
+                showMessage('Failed to load payment form. Please refresh and try again.', 'error');
+                document.getElementById('payment-widget').innerHTML = 
+                    '<p style="color: #666; text-align: center;">Unable to load payment form</p>';
+            }
+        }
+        
+        // Handle payment submission
+        document.getElementById('pay-btn').addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.textContent;
+            
+            try {
+                // Disable button and show processing
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+                
+                // Confirm payment
+                const result = await payment.confirmPayment(selectedPlan);
+                
+                if (result.success && !result.needsRedirect) {
+                    // Payment succeeded without redirect
+                    showMessage('Payment successful! Redirecting...', 'success');
+                    
+                    // Store success data
+                    sessionStorage.setItem('payment_success', JSON.stringify({
+                        payment_id: result.paymentId,
+                        plan: selectedPlan,
+                        timestamp: new Date().toISOString()
+                    }));
+                    
+                    // Redirect to success page
+                    setTimeout(() => {
+                        window.location.href = `/static/payment-success.html?payment_id=${result.paymentId}&plan=${selectedPlan}`;
+                    }, 1500);
+                }
+                // If needsRedirect is true, Hyperswitch will handle the redirect automatically
+                
+            } catch (error) {
+                console.error('Payment failed:', error);
+                showMessage(error.message || 'Payment failed. Please try again.', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+        
+        // Show message helper
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializePayment);
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "main_port": 10210,
+  "components": {
+    "landing": {
+      "name": "Landing Page",
+      "path": "10210-landing",
+      "internal_port": 5500,
+      "route": "/home",
+      "enabled": true
+    },
+    "api": {
+      "name": "Main API",
+      "path": "10210-api",
+      "internal_port": 8000,
+      "route": "/",
+      "enabled": true
+    },
+    "auth": {
+      "name": "Authentication",
+      "path": "10210-auth",
+      "internal_port": 5502,
+      "route": "/auth",
+      "enabled": true
+    },
+    "admin": {
+      "name": "Admin Panel",
+      "path": "10210-admin",
+      "internal_port": 8001,
+      "route": "/admin",
+      "enabled": true
+    }
+  },
+  "docker": {
+    "username": "***",
+    "token": "***",
+    "waha_image": "devlikeapro/waha-plus:latest",
+    "waha_free_port": 4500,
+    "waha_paid_ports_start": 4501
+  },
+  "required_env_vars": [
+    "GROQ_API_KEY",
+    "STRIPE_API_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "JWT_SECRET_KEY"
+  ]
+}

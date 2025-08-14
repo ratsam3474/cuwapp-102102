@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Checkout - CuWhapp</title>
+    
+    <!-- Hyperswitch SDK -->
+    <script src="https://beta.hyperswitch.io/v1/HyperLoader.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+        }
+        .debug-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        
+        #payment-form {
+            margin-top: 30px;
+        }
+        #unified-checkout {
+            min-height: 300px;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            background: white;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .console {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .console-entry {
+            margin: 2px 0;
+        }
+        .console-entry.error { color: #ff6b6b; }
+        .console-entry.success { color: #51cf66; }
+        .console-entry.info { color: #339af0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Checkout Flow</h1>
+        
+        <div class="debug-section">
+            <div class="debug-title">Step 1: User Setup <span id="user-status" class="status pending">PENDING</span></div>
+            <div id="user-info">Checking user...</div>
+            <button onclick="setTestUser()">Set Test User</button>
+        </div>
+        
+        <div class="debug-section">
+            <div class="debug-title">Step 2: Payment Intent <span id="intent-status" class="status pending">PENDING</span></div>
+            <div id="intent-info">Not created yet</div>
+            <button onclick="createPaymentIntent()">Create Payment Intent</button>
+        </div>
+        
+        <div class="debug-section">
+            <div class="debug-title">Step 3: Initialize Hyperswitch <span id="hyper-status" class="status pending">PENDING</span></div>
+            <div id="hyper-info">Not initialized</div>
+            <button onclick="initializeHyperswitch()">Initialize Hyperswitch</button>
+        </div>
+        
+        <div class="debug-section">
+            <div class="debug-title">Step 4: Payment Form <span id="form-status" class="status pending">PENDING</span></div>
+            <div id="unified-checkout">
+                <p style="color: #999; text-align: center;">Payment form will appear here</p>
+            </div>
+            <button id="submit-btn" onclick="submitPayment()" disabled>Submit Payment</button>
+        </div>
+        
+        <div class="debug-section">
+            <div class="debug-title">Console Output</div>
+            <div class="console" id="console"></div>
+        </div>
+    </div>
+    
+    <script src="/static/js/user-cache.js"></script>
+    
+    <script>
+        let hyper = null;
+        let unifiedCheckout = null;
+        let clientSecret = null;
+        
+        // Custom console logger
+        function log(message, type = 'info') {
+            const consoleDiv = document.getElementById('console');
+            const entry = document.createElement('div');
+            entry.className = `console-entry ${type}`;
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            entry.textContent = `[${timestamp}] ${message}`;
+            consoleDiv.appendChild(entry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            
+            // Also log to browser console
+            if (type === 'error') {
+                console.error(message);
+            } else {
+                console.log(message);
+            }
+        }
+        
+        // Check user on load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkUser();
+        });
+        
+        function checkUser() {
+            const user = UserCache.getUser();
+            const statusEl = document.getElementById('user-status');
+            const infoEl = document.getElementById('user-info');
+            
+            if (user && user.email) {
+                statusEl.className = 'status success';
+                statusEl.textContent = 'OK';
+                infoEl.innerHTML = `User: ${user.email} (ID: ${user.id || 'N/A'})`;
+                log(`User found: ${user.email}`, 'success');
+            } else {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'NOT FOUND';
+                infoEl.innerHTML = 'No user in cache. Click "Set Test User" to continue.';
+                log('No user found in cache', 'error');
+            }
+        }
+        
+        function setTestUser() {
+            const testUser = {
+                id: 'test_user_123',
+                username: 'testuser',
+                email: 'test@example.com',
+                name: 'Test User'
+            };
+            
+            UserCache.setUser(testUser);
+            log('Test user set successfully', 'success');
+            checkUser();
+        }
+        
+        async function createPaymentIntent() {
+            try {
+                log('Creating payment intent in TEST MODE...');
+                
+                const user = UserCache.getUser();
+                if (!user) {
+                    throw new Error('No user found. Please set test user first.');
+                }
+                
+                // Force test mode by using a test client secret
+                // This bypasses the API and uses Hyperswitch test mode directly
+                const testPaymentId = `test_pay_${Date.now()}`;
+                clientSecret = `${testPaymentId}_secret_test_mode`;
+                
+                // Still try to create real intent but use test mode as fallback
+                try {
+                    const response = await fetch('/api/payments/create-payment-intent', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            plan_id: 'starter',
+                            amount: 700, // $7 in cents
+                            user_id: user.id,
+                            email: user.email,
+                            return_url: 'https://app.cuwapp.com/static/payment-success.html',
+                            cancel_url: 'https://app.cuwapp.com/static/debug-checkout.html'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.clientSecret || data.client_secret) {
+                            clientSecret = data.clientSecret || data.client_secret;
+                            log('Using real payment intent from API', 'success');
+                        }
+                    }
+                } catch (apiError) {
+                    log('API failed, using test mode', 'info');
+                }
+                
+                const statusEl = document.getElementById('intent-status');
+                const infoEl = document.getElementById('intent-info');
+                
+                if (clientSecret) {
+                    statusEl.className = 'status success';
+                    statusEl.textContent = 'CREATED';
+                    infoEl.innerHTML = `
+                        Client Secret: ${clientSecret.substring(0, 20)}...<br>
+                        <strong style="color: green;">TEST MODE ENABLED</strong>
+                    `;
+                    log(`Payment intent created in TEST MODE`, 'success');
+                } else {
+                    throw new Error('No client secret received');
+                }
+                
+            } catch (error) {
+                log(`Failed to create payment intent: ${error.message}`, 'error');
+                document.getElementById('intent-status').className = 'status error';
+                document.getElementById('intent-status').textContent = 'ERROR';
+                document.getElementById('intent-info').innerHTML = `Error: ${error.message}`;
+            }
+        }
+        
+        async function initializeHyperswitch() {
+            try {
+                if (!clientSecret) {
+                    throw new Error('No client secret. Please create payment intent first.');
+                }
+                
+                log('Initializing Hyperswitch...');
+                
+                // Initialize with your publishable key
+                const publishableKey = 'pk_snd_68a3be601ff24b82a4b163a8b3d046b2';
+                
+                hyper = Hyper(publishableKey, {
+                    customBackendUrl: "https://app.cuwapp.com"
+                });
+                
+                log(`Hyperswitch initialized with key: ${publishableKey.substring(0, 15)}...`, 'success');
+                
+                // Create widgets
+                const widgets = hyper.widgets({
+                    clientSecret,
+                    appearance: {
+                        theme: 'default'
+                    }
+                });
+                
+                log('Creating payment widget...');
+                
+                // Create unified checkout with all payment methods
+                unifiedCheckout = widgets.create('payment', {
+                    layout: 'tabs',
+                    wallets: {
+                        walletReturnUrl: 'https://app.cuwapp.com/static/payment-success.html',
+                        applePay: 'auto',
+                        googlePay: 'auto',
+                        payPal: 'auto'
+                    },
+                    paymentMethodOrder: ['card', 'paypal'],
+                    defaultValues: {
+                        billingDetails: {
+                            name: 'Test User',
+                            email: UserCache.getUser()?.email || 'test@example.com'
+                        }
+                    },
+                    fields: {
+                        billingDetails: {
+                            name: 'never',
+                            email: 'never',
+                            address: 'never'
+                        }
+                    }
+                });
+                
+                log('Mounting payment form...');
+                
+                // Clear the placeholder
+                document.getElementById('unified-checkout').innerHTML = '';
+                
+                // Mount the element
+                const mountResult = await unifiedCheckout.mount('#unified-checkout');
+                
+                if (mountResult && mountResult.error) {
+                    throw new Error(mountResult.error.message || 'Failed to mount');
+                }
+                
+                // Update status
+                document.getElementById('hyper-status').className = 'status success';
+                document.getElementById('hyper-status').textContent = 'INITIALIZED';
+                document.getElementById('hyper-info').textContent = 'Hyperswitch SDK loaded and ready';
+                
+                document.getElementById('form-status').className = 'status success';
+                document.getElementById('form-status').textContent = 'READY';
+                
+                document.getElementById('submit-btn').disabled = false;
+                
+                log('Payment form mounted successfully!', 'success');
+                
+            } catch (error) {
+                log(`Failed to initialize: ${error.message}`, 'error');
+                document.getElementById('hyper-status').className = 'status error';
+                document.getElementById('hyper-status').textContent = 'ERROR';
+                document.getElementById('hyper-info').innerHTML = `Error: ${error.message}`;
+            }
+        }
+        
+        async function submitPayment() {
+            try {
+                log('Submitting payment...');
+                
+                const button = document.getElementById('submit-btn');
+                button.disabled = true;
+                button.textContent = 'Processing...';
+                
+                log('Confirming payment with Hyperswitch...');
+                
+                // Get user details
+                const user = UserCache.getUser();
+                
+                const result = await hyper.confirmPayment({
+                    elements: unifiedCheckout,
+                    confirmParams: {
+                        return_url: 'https://app.cuwapp.com/static/payment-success.html?plan=starter',
+                        payment_method_data: {
+                            billing: {
+                                name: user?.name || 'Test User',
+                                email: user?.email || 'test@example.com'
+                            }
+                        }
+                    },
+                    redirect: 'if_required'
+                });
+                
+                log(`Confirmation result: ${JSON.stringify(result)}`, 'info');
+                
+                if (result.error) {
+                    const errorDetails = {
+                        message: result.error.message,
+                        type: result.error.type,
+                        code: result.error.code,
+                        param: result.error.param
+                    };
+                    log(`Error details: ${JSON.stringify(errorDetails)}`, 'error');
+                    
+                    // Check for specific error types
+                    if (result.error.type === 'card_error') {
+                        log('Card error - please check card details', 'error');
+                    } else if (result.error.type === 'validation_error') {
+                        log('Validation error - please check form fields', 'error');
+                    }
+                    
+                    throw new Error(result.error.message || 'Payment failed');
+                }
+                
+                if (result.status === 'succeeded') {
+                    log('Payment successful!', 'success');
+                    window.location.href = '/static/payment-success.html?plan=starter';
+                } else if (result.status === 'processing') {
+                    log('Payment is processing...', 'info');
+                    // Could poll for status or wait for webhook
+                } else if (result.status === 'requires_action') {
+                    log('Payment requires additional action', 'info');
+                    // SDK handles this automatically with redirect
+                } else {
+                    log(`Unexpected payment status: ${result.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`Payment failed: ${error.message}`, 'error');
+                document.getElementById('submit-btn').disabled = false;
+                document.getElementById('submit-btn').textContent = 'Submit Payment';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+[
+  {
+    "name": "Main App Health",
+    "status": "failed",
+    "code": 500,
+    "expected": 200,
+    "time": 0.003754138946533203
+  },
+  {
+    "name": "Admin Dashboard Health",
+    "status": "passed",
+    "code": 200,
+    "time": 0.003268003463745117
+  },
+  {
+    "name": "Auth Stats",
+    "status": "passed",
+    "code": 200,
+    "time": 0.0032930374145507812
+  },
+  {
+    "name": "Newsletter Subscribe",
+    "status": "passed",
+    "code": 200,
+    "time": 0.018086910247802734
+  },
+  {
+    "name": "Get Sessions",
+    "status": "failed",
+    "code": 200,
+    "expected": 401,
+    "time": 0.01111292839050293
+  },
+  {
+    "name": "Get Campaigns",
+    "status": "failed",
+    "code": 200,
+    "expected": 401,
+    "time": 0.013972997665405273
+  },
+  {
+    "name": "Campaign Stats",
+    "status": "failed",
+    "code": 200,
+    "expected": 401,
+    "time": 0.013267040252685547
+  },
+  {
+    "name": "List Warmers",
+    "status": "failed",
+    "code": 200,
+    "expected": 401,
+    "time": 0.008915901184082031
+  },
+  {
+    "name": "Admin Overview Stats",
+    "status": "passed",
+    "code": 200,
+    "time": 0.24388599395751953
+  },
+  {
+    "name": "Admin Get Users",
+    "status": "passed",
+    "code": 200,
+    "time": 0.020737886428833008
+  },
+  {
+    "name": "Admin Revenue Analytics",
+    "status": "passed",
+    "code": 200,
+    "time": 0.004945278167724609
+  },
+  {
+    "name": "Admin Usage Analytics",
+    "status": "passed",
+    "code": 200,
+    "time": 0.006667137145996094
+  },
+  {
+    "name": "Admin Warmer Analytics",
+    "status": "passed",
+    "code": 200,
+    "time": 0.006433010101318359
+  },
+  {
+    "name": "Admin Docker Containers",
+    "status": "passed",
+    "code": 200,
+    "time": 0.21350812911987305
+  }
+]

@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - WhatsApp Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a4d2e;  /* Dark green */
+            --secondary-color: #0f3d0f; /* Darker green */
+            --dark-color: #000000;      /* Black */
+            --light-bg: #f8f9fa;
+            --accent-green: #2d5f3f;    /* Medium dark green */
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            transform: translateY(-1px);
+        }
+
+        .analytics-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .analytics-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .metric-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            margin: 10px 0;
+            border: 1px solid var(--dark-color);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .tab-content {
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .nav-tabs {
+            background: white;
+            border-radius: 10px 10px 0 0;
+            padding: 10px 10px 0;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--dark-color) !important;
+            border: 2px solid var(--primary-color);
+            background: white;
+            padding: 10px 20px;
+            margin-right: 5px;
+            border-radius: 10px 10px 0 0;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: var(--dark-color) !important;
+            background: var(--light-bg);
+            border-color: var(--secondary-color);
+        }
+
+        .nav-tabs .nav-link.active {
+            background: var(--primary-color);
+            color: white !important;
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .export-btn {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .export-btn:hover {
+            background: var(--dark-color);
+            transform: translateY(-1px);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-sent {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-delivered {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-live {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-cached {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        .rate-indicator {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .rate-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .rate-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .rate-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-graph-up"></i> WhatsApp Analytics
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="bi bi-house"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/analytics">
+                            <i class="bi bi-bar-chart"></i> Analytics
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Date Range Filter -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="analytics-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <label>Start Date</label>
+                            <input type="date" class="form-control" id="startDate">
+                        </div>
+                        <div class="col-md-3">
+                            <label>End Date</label>
+                            <input type="date" class="form-control" id="endDate">
+                        </div>
+                        <div class="col-md-3">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary d-block w-100" onclick="applyFilters()">
+                                <i class="bi bi-funnel"></i> Apply Filters
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-secondary d-block w-100" onclick="resetFilters()">
+                                <i class="bi bi-arrow-clockwise"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="analyticsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="campaign-tab" data-bs-toggle="tab" data-bs-target="#campaign" type="button">
+                    <i class="bi bi-megaphone"></i> Campaign Analytics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="warmer-tab" data-bs-toggle="tab" data-bs-target="#warmer" type="button">
+                    <i class="bi bi-fire"></i> Warmer Analytics
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="analyticsTabContent">
+            <!-- Campaign Analytics Tab -->
+            <div class="tab-pane fade show active" id="campaign" role="tabpanel">
+                <!-- Overview Metrics -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h4>Campaign Overview</h4>
+                        <div class="row" id="campaignOverview">
+                            <!-- Metrics will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4>Detailed Campaign Metrics</h4>
+                            <div>
+                                <button class="export-btn" onclick="exportCampaignData('csv')">
+                                    <i class="bi bi-download"></i> Export CSV
+                                </button>
+                                <button class="export-btn ms-2" onclick="exportCampaignData('json')">
+                                    <i class="bi bi-file-code"></i> Export JSON
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Table -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="analytics-card">
+                            <div class="table-container">
+                                <table class="table table-hover" id="campaignTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Phone Number</th>
+                                            <th>Contact Name</th>
+                                            <th>Campaign</th>
+                                            <th>Source File</th>
+                                            <th>Status</th>
+                                            <th>Response Rate</th>
+                                            <th>Sent At</th>
+                                            <th>Read</th>
+                                            <th>Responded</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="campaignTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-container" id="campaignPagination">
+                                <!-- Pagination will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warmer Analytics Tab -->
+            <div class="tab-pane fade" id="warmer" role="tabpanel">
+                <!-- Overview Metrics -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h4>Warmer Overview</h4>
+                        <div class="row" id="warmerOverview">
+                            <!-- Metrics will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4>Warmer Sessions</h4>
+                            <div>
+                                <select class="form-select d-inline-block w-auto me-2" id="warmerSelect" onchange="filterWarmerData()">
+                                    <option value="">All Warmers</option>
+                                </select>
+                                <button class="export-btn" onclick="exportWarmerTranscripts()">
+                                    <i class="bi bi-chat-text"></i> Export Transcripts
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Stats -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="analytics-card">
+                            <h5>Messages per Session</h5>
+                            <div class="table-container">
+                                <table class="table table-hover" id="warmerTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Warmer Name</th>
+                                            <th>Session</th>
+                                            <th>Status</th>
+                                            <th>Total Messages</th>
+                                            <th>Group Messages</th>
+                                            <th>Direct Messages</th>
+                                            <th>Duration (min)</th>
+                                            <th>Active Groups</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="warmerTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-container" id="warmerPagination">
+                                <!-- Pagination will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Analytics Management
+        let currentCampaignPage = 1;
+        let currentWarmerPage = 1;
+        const pageSize = 50;
+        
+        // Get user ID from localStorage
+        const userId = localStorage.getItem('userId');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default dates
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            
+            // Load initial data
+            loadCampaignOverview();
+            loadCampaignDetailed(1);
+            loadWarmerOverview();
+            loadWarmerDetailed(1);
+            
+            // Ensure warmer tab works correctly - prevent any default navigation
+            const warmerTab = document.getElementById('warmer-tab');
+            if (warmerTab) {
+                warmerTab.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'A' || e.target.closest('a')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+
+        // Campaign Analytics Functions
+        async function loadCampaignOverview() {
+            try {
+                showLoading();
+                
+                // Use new clean metrics endpoint
+                const metricsUrl = `/api/metrics/all?user_id=${userId || 'admin'}`;
+                const response = await fetch(metricsUrl);
+                const data = await response.json();
+                
+                // Display metrics from new endpoint
+                displayCampaignOverview(data.campaign);
+                // Also update warmer metrics if available
+                if (data.warmer) {
+                    displayWarmerMetrics(data.warmer);
+                }
+            } catch (error) {
+                console.error('Error loading campaign overview:', error);
+                showAlert('Failed to load campaign overview', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayCampaignOverview(metrics) {
+            const container = document.getElementById('campaignOverview');
+            container.innerHTML = `
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="metric-value">${metrics.total_campaigns_created || 0}</div>
+                        <div class="metric-label">Total Campaigns</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);">
+                        <div class="metric-value">${metrics.total_active_campaigns || 0}</div>
+                        <div class="metric-label">Active Campaigns</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <div class="metric-value">${metrics.total_messages_sent || 0}</div>
+                        <div class="metric-label">Messages Sent</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="metric-value">${metrics.total_messages_delivered || 0}</div>
+                        <div class="metric-label">Delivered</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <div class="metric-value">${metrics.total_messages_read || 0}</div>
+                        <div class="metric-label">Read</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <div class="metric-value">${metrics.total_messages_responded || 0}</div>
+                        <div class="metric-label">Responded</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <div class="metric-value">${metrics.avg_response_rate || 0}%</div>
+                        <div class="metric-label">Response Rate</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-box" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <div class="metric-value">${metrics.total_messages_failed || 0}</div>
+                        <div class="metric-label">Failed</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadCampaignDetailed(page) {
+            try {
+                showLoading();
+                currentCampaignPage = page;
+                
+                const params = new URLSearchParams();
+                params.append('page', page);
+                params.append('page_size', pageSize);
+                if (userId) params.append('user_id', userId);
+                const response = await fetch(`/analytics/campaign/detailed?${params.toString()}`);
+                const data = await response.json();
+                
+                displayCampaignTable(data.items);
+                displayPagination('campaignPagination', data.pagination, loadCampaignDetailed);
+            } catch (error) {
+                console.error('Error loading campaign details:', error);
+                showAlert('Failed to load campaign details', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayCampaignTable(items) {
+            const tbody = document.getElementById('campaignTableBody');
+            tbody.innerHTML = '';
+            
+            items.forEach(item => {
+                const rateClass = item.response_rate > 50 ? 'rate-high' : 
+                                 item.response_rate > 20 ? 'rate-medium' : 'rate-low';
+                const statusClass = `status-${item.response_status || 'unknown'}`;
+                
+                const row = `
+                    <tr>
+                        <td>${item.phone_number}</td>
+                        <td>${item.contact_name || '-'}</td>
+                        <td>${item.campaign_name}</td>
+                        <td>${item.source_file || '-'}</td>
+                        <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+                        <td>
+                            <span class="rate-indicator ${rateClass}">${item.response_rate}%</span>
+                            ${item.response_status ? `<span class="status-badge ${statusClass} ms-1">${item.response_status}</span>` : ''}
+                        </td>
+                        <td>${item.sent_at ? new Date(item.sent_at).toLocaleString() : '-'}</td>
+                        <td>${item.read_at ? '<i class="bi bi-check-circle text-success"></i>' : '-'}</td>
+                        <td>${item.responded ? '<i class="bi bi-check-circle text-success"></i>' : '-'}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Warmer Analytics Functions
+        async function loadWarmerOverview() {
+            try {
+                showLoading();
+                // Use new clean metrics endpoint
+                const metricsUrl = `/api/metrics/warmer?user_id=${userId || 'admin'}`;
+                const response = await fetch(metricsUrl);
+                const data = await response.json();
+                
+                // Also load the legacy overview with user filtering
+                const overviewUrl = `/analytics/warmer/overview?user_id=${userId || 'admin'}`;
+                const overviewResponse = await fetch(overviewUrl);
+                const overviewData = await overviewResponse.json();
+                
+                displayWarmerOverview(overviewData.overview);
+                populateWarmerSelect(overviewData.overview);
+            } catch (error) {
+                console.error('Error loading warmer overview:', error);
+                showAlert('Failed to load warmer overview', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function displayWarmerMetrics(metrics) {
+            // Update warmer tab with metrics from combined endpoint
+            const warmerStatsElement = document.querySelector('#warmer-tab .warmer-stats');
+            if (warmerStatsElement && metrics) {
+                warmerStatsElement.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="metric-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <div class="metric-value">${Math.round(metrics.total_warmer_minutes || 0)}</div>
+                                <div class="metric-label">Warmer Minutes</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                <div class="metric-value">${metrics.total_group_messages || 0}</div>
+                                <div class="metric-label">Group Messages</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                                <div class="metric-value">${metrics.total_dm_messages || 0}</div>
+                                <div class="metric-label">Direct Messages</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                                <div class="metric-value">${metrics.total_messages || 0}</div>
+                                <div class="metric-label">Total Messages</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayWarmerOverview(overview) {
+            const container = document.getElementById('warmerOverview');
+            
+            // Round total minutes to remove decimals
+            const totalMinutes = Math.round(overview.total_duration_minutes || 0);
+            
+            container.innerHTML = `
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${overview.total_messages_sent || 0}</div>
+                        <div class="metric-label">Total Messages</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${overview.total_group_messages || 0}</div>
+                        <div class="metric-label">Group Messages</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${overview.total_direct_messages || 0}</div>
+                        <div class="metric-label">Direct Messages</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${overview.active_groups || 0}</div>
+                        <div class="metric-label">Active Groups</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${totalMinutes}</div>
+                        <div class="metric-label">Total Minutes</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="metric-box">
+                        <div class="metric-value">${overview.total_sessions || 0}</div>
+                        <div class="metric-label">Total Sessions</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadWarmerDetailed(page, warmerId = null) {
+            try {
+                showLoading();
+                currentWarmerPage = page;
+                
+                let url = `/analytics/warmer/detailed?page=${page}&page_size=${pageSize}`;
+                if (warmerId) {
+                    url += `&warmer_id=${warmerId}`;
+                }
+                // Add user_id parameter
+                if (userId) {
+                    url += `&user_id=${userId}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                displayWarmerTable(data.items);
+                displayPagination('warmerPagination', data.pagination, loadWarmerDetailed);
+                
+                // Populate warmer select with unique warmers
+                const select = document.getElementById('warmerSelect');
+                const currentValue = select.value;
+                if (select.options.length <= 1) { // Only has the default option
+                    const uniqueWarmers = new Map();
+                    data.items.forEach(item => {
+                        if (!uniqueWarmers.has(item.warmer_id)) {
+                            uniqueWarmers.set(item.warmer_id, item.warmer_name);
+                        }
+                    });
+                    
+                    uniqueWarmers.forEach((name, id) => {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = name;
+                        select.appendChild(option);
+                    });
+                    
+                    // Restore previous selection if it exists
+                    if (currentValue) {
+                        select.value = currentValue;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading warmer details:', error);
+                showAlert('Failed to load warmer details', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayWarmerTable(items) {
+            const tbody = document.getElementById('warmerTableBody');
+            tbody.innerHTML = '';
+            
+            items.forEach(item => {
+                // First display overall warmer stats
+                const overallRow = `
+                    <tr>
+                        <td rowspan="${item.session_stats.length + 1}"><strong>${item.warmer_name}</strong></td>
+                        <td>Overall</td>
+                        <td><span class="status-badge status-${item.status}">${item.status}</span></td>
+                        <td>${item.total_messages || 0}</td>
+                        <td>${item.group_messages || 0}</td>
+                        <td>${item.direct_messages || 0}</td>
+                        <td>${item.duration_minutes ? item.duration_minutes.toFixed(2) : '0'}</td>
+                        <td>${item.unique_groups || 0}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += overallRow;
+                
+                // Display individual session stats
+                item.session_stats.forEach(session => {
+                    // Calculate per-session group/DM breakdown (proportional to overall)
+                    const sessionTotal = session.sent + session.received;
+                    const groupRatio = item.total_messages > 0 ? item.group_messages / item.total_messages : 0;
+                    const sessionGroupMessages = Math.round(sessionTotal * groupRatio);
+                    const sessionDmMessages = sessionTotal - sessionGroupMessages;
+                    
+                    const sessionRow = `
+                        <tr>
+                            <td>${session.session}</td>
+                            <td>-</td>
+                            <td>${sessionTotal}</td>
+                            <td>${sessionGroupMessages}</td>
+                            <td>${sessionDmMessages}</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += sessionRow;
+                });
+            });
+        }
+
+        function populateWarmerSelect(overview) {
+            // Populated from loadWarmerDetailed
+        }
+        
+        function filterWarmerData() {
+            const warmerId = document.getElementById('warmerSelect').value;
+            if (warmerId) {
+                loadWarmerDetailed(1, warmerId);
+            } else {
+                loadWarmerDetailed(1);
+            }
+        }
+
+        // Export Functions
+        async function exportCampaignData(format) {
+            try {
+                showLoading();
+                const params = new URLSearchParams();
+                params.append('format', format);
+                if (userId) params.append('user_id', userId);
+                const response = await fetch(`/analytics/campaign/export?${params.toString()}`);
+                
+                if (format === 'csv') {
+                    const blob = await response.blob();
+                    downloadFile(blob, `campaign_report_${Date.now()}.csv`, 'text/csv');
+                } else {
+                    const data = await response.json();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                    downloadFile(blob, `campaign_report_${Date.now()}.json`, 'application/json');
+                }
+            } catch (error) {
+                console.error('Error exporting campaign data:', error);
+                showAlert('Failed to export campaign data', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function exportWarmerTranscripts() {
+            const warmerId = document.getElementById('warmerSelect').value;
+            if (!warmerId) {
+                showAlert('Please select a warmer session', 'warning');
+                return;
+            }
+            
+            try {
+                showLoading();
+                const response = await fetch(`/analytics/warmer/transcripts/${warmerId}?format=txt`);
+                const blob = await response.blob();
+                downloadFile(blob, `warmer_transcript_${warmerId}_${Date.now()}.txt`, 'text/plain');
+            } catch (error) {
+                console.error('Error exporting warmer transcripts:', error);
+                showAlert('Failed to export warmer transcripts', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Utility Functions
+        function displayPagination(containerId, pagination, loadFunction) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            if (!pagination || pagination.total_pages <= 1) return;
+            
+            const nav = document.createElement('nav');
+            const ul = document.createElement('ul');
+            ul.className = 'pagination';
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${pagination.page === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); ${loadFunction.name}(${pagination.page - 1})">Previous</a>`;
+            ul.appendChild(prevLi);
+            
+            // Page numbers
+            for (let i = 1; i <= Math.min(pagination.total_pages, 10); i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === pagination.page ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); ${loadFunction.name}(${i})">${i}</a>`;
+                ul.appendChild(li);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${pagination.page === pagination.total_pages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); ${loadFunction.name}(${pagination.page + 1})">Next</a>`;
+            ul.appendChild(nextLi);
+            
+            nav.appendChild(ul);
+            container.appendChild(nav);
+        }
+
+        function downloadFile(blob, filename, type) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        function applyFilters() {
+            loadCampaignOverview();
+            loadCampaignDetailed(1);
+        }
+
+        function resetFilters() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            
+            applyFilters();
+        }
+
+        function showLoading() {
+            document.querySelector('.loading-spinner').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.querySelector('.loading-spinner').style.display = 'none';
+        }
+
+        function showAlert(message, type) {
+            // You can implement a toast notification here
+            console.error(message);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Core dependencies
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# Database
+sqlalchemy
+aiosqlite
+alembic
+
+# LangChain and LangGraph
+langchain
+langchain-google-genai
+langgraph
+langchain-community
+
+# Async support
+aiofiles
+httpx
+
+# Utils
+python-dotenv
+pyyaml
+
+# Development
+pytest
+pytest-asyncio

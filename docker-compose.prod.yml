@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: stainlessman/cuwhapp-nginx:latest
+    container_name: cuwhapp-nginx
+    ports:
+      - "80:10210"  # Map to port 80 for production
+    volumes:
+      - ./nginx-docker.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - landing
+      - api
+      - auth
+      - admin
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Landing Page
+  landing:
+    image: stainlessman/cuwhapp-landing:latest
+    container_name: cuwhapp-landing
+    environment:
+      - NODE_ENV=production
+      - PORT=5500
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_API_URL=http://174.138.55.42/dashboard
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Main API
+  api:
+    image: stainlessman/cuwhapp-api:latest
+    container_name: cuwhapp-api
+    environment:
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - WAHA_BASE_URL=http://cuwhapp-waha-free:3000
+      - DO_WAHA_FUNCTION_URL=${DO_WAHA_FUNCTION_URL}
+      - DOCKER_DROPLET_IP=174.138.55.42
+    volumes:
+      - ./data:/app/data
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Auth Service
+  auth:
+    image: stainlessman/cuwhapp-auth:latest
+    container_name: cuwhapp-auth
+    environment:
+      - NODE_ENV=production
+      - PORT=5502
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Admin Dashboard
+  admin:
+    image: stainlessman/cuwhapp-admin:latest
+    container_name: cuwhapp-admin
+    environment:
+      - PORT=8001
+      - API_URL=http://cuwhapp-api:8000
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: cuwhapp-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # WAHA Free Instance (already running on port 4500)
+  waha-free:
+    image: devlikeapro/waha-plus:latest
+    container_name: cuwhapp-waha-free
+    ports:
+      - "4500:3000"
+    environment:
+      - WAHA_PRINT_QR=false
+      - WAHA_LOG_LEVEL=info
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+networks:
+  cuwhapp-network:
+    driver: bridge

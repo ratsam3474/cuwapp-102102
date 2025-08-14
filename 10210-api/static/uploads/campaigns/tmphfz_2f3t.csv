@@ -1,0 +1,6 @@
+phone_number,formatted_phone,country_code,country_name,saved_name,public_name,is_my_contact,is_business,is_blocked,is_admin,is_super_admin,labels,last_msg_text,last_msg_date,last_msg_type,last_msg_status
++1 2604021992,+1 2604021992,1,United States/Canada,John Doe,first,true,false,false,false,false,,"Hello, How are you doing?",2025-08-12 16:08:00,,sent
++1 7022773394,+1 7022773394,1,United States/Canada,John Doe,9th,true,false,false,false,false,,"Hello, How are you doing?",2025-08-12 16:08:05,,sent
++1 5408206799,+1 5408206799,1,United States/Canada,John Doe,Any,true,true,false,false,false,,I totally agree with that,2025-08-12 17:57:03,,received
++1 7024215075,+1 7024215075,1,United States/Canada,John Doe,eefff,true,true,false,false,false,,"Hello, How are you doing?",2025-08-12 16:08:17,,sent
++1 7024215448,+1 7024215448,1,United States/Canada,John Doe,Dan,true,true,false,false,false,,That's a great point,2025-08-12 17:56:35,,received

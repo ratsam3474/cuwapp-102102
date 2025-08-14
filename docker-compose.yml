@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: cuwhapp-nginx
+    ports:
+      - "10210:10210"
+    volumes:
+      - ./nginx-docker.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - landing
+      - api
+      - auth
+      - admin
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # Landing Page (Next.js)
+  landing:
+    container_name: cuwhapp-landing
+    build:
+      context: ./10210-landing
+      dockerfile: Dockerfile
+    ports:
+      - "5500:5500"
+    environment:
+      - NODE_ENV=production
+      - PORT=5500
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_API_URL=http://localhost:10210/dashboard
+    volumes:
+      - ./10210-landing:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://www.cuwapp.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Main API (Python FastAPI)
+  api:
+    container_name: cuwhapp-api
+    build:
+      context: ./10210-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - CRYPTOMUS_API_KEY=${CRYPTOMUS_API_KEY}
+      - CRYPTOMUS_MERCHANT_ID=${CRYPTOMUS_MERCHANT_ID}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=sqlite:///data/wagent.db
+      - REDIS_URL=redis://redis:6379
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./10210-api:/app
+      - ./10210-api/data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://app.cuwapp.com/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Admin Dashboard (Python)
+  admin:
+    container_name: cuwhapp-admin
+    build:
+      context: ./10210-admin
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=sqlite:///data/wagent.db
+      - ADMIN_SECRET_CODE=10210
+    volumes:
+      - ./10210-admin:/app
+      - ./10210-api/data:/app/data  # Share database with API
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://admin.cuwapp.com/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Authentication Service (Next.js)
+  auth:
+    container_name: cuwhapp-auth
+    build:
+      context: ./10210-auth
+      dockerfile: Dockerfile
+    ports:
+      - "5502:5502"
+    environment:
+      - NODE_ENV=production
+      - PORT=5502
+    volumes:
+      - ./10210-auth:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://auth.cuwapp.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: cuwhapp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+  # WAHA WhatsApp Container (Free tier)
+  waha-free:
+    image: devlikeapro/waha-plus:latest
+    container_name: cuwhapp-waha-free
+    ports:
+      - "4500:3000"
+    environment:
+      - WHATSAPP_HOOK_URL=http://api:8000/webhooks/whatsapp
+      - WHATSAPP_HOOK_EVENTS=*
+      - WHATSAPP_API_KEY=free-tier-key
+    networks:
+      - cuwhapp-network
+    restart: unless-stopped
+
+networks:
+  cuwhapp-network:
+    driver: bridge
+
+volumes:
+  redis-data:

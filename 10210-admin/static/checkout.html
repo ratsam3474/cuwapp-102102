@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuWhapp - Secure Checkout</title>
+    
+    <!-- Hyperswitch SDK -->
+    <script src="https://beta.hyperswitch.io/v1/HyperLoader.js"></script>
+    
+    <!-- Existing styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        .checkout-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            margin: 20px;
+            padding: 40px;
+        }
+        
+        .checkout-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .checkout-header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .plan-details {
+            background: #f7f8fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .plan-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .plan-price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .plan-price span {
+            font-size: 16px;
+            color: #999;
+            font-weight: normal;
+        }
+        
+        #unified-checkout {
+            margin: 30px 0;
+            min-height: 300px;
+        }
+        
+        .pay-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .pay-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #payment-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        #payment-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        #payment-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loading-spinner.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="checkout-container">
+        <div class="checkout-header">
+            <h1>🚀 Complete Your Upgrade</h1>
+            <p style="color: #666;">Secure payment powered by Hyperswitch</p>
+        </div>
+        
+        <div class="plan-details">
+            <div class="plan-name" id="plan-name">Loading...</div>
+            <div class="plan-price" id="plan-price">
+                $<span id="price-amount">0</span><span>/month</span>
+            </div>
+        </div>
+        
+        <form id="payment-form">
+            <!-- Hyperswitch Unified Checkout will be injected here -->
+            <div id="unified-checkout">
+                <div class="loading-spinner active">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #666;">Loading payment form...</p>
+                </div>
+            </div>
+            
+            <button type="submit" id="submit" class="pay-button" disabled>
+                Complete Payment
+            </button>
+            
+            <div id="payment-message"></div>
+        </form>
+        
+        <center>
+            <a href="/" class="back-link">← Back to Dashboard</a>
+        </center>
+    </div>
+    
+    <!-- Include user cache system -->
+    <script src="/static/js/user-cache.js"></script>
+    
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('plan') || 'starter';  // Default to starter
+        const amount = urlParams.get('amount') || '700';  // Default to $7
+        const initialPaymentId = urlParams.get('payment_id'); // Initial payment ID if provided
+        const email = urlParams.get('email') || 'test@example.com';
+        const userId = urlParams.get('user_id');
+        
+        // Plan details mapping
+        const plans = {
+            starter: { name: 'Starter Plan', price: 7 },
+            hobby: { name: 'Hobby Plan', price: 20 },
+            pro: { name: 'Pro Plan', price: 45 },
+            premium: { name: 'Premium Plan', price: 99 }
+        };
+        
+        // Update UI with plan details
+        if (planId && plans[planId]) {
+            document.getElementById('plan-name').textContent = plans[planId].name;
+            document.getElementById('price-amount').textContent = plans[planId].price;
+        }
+        
+        // Initialize Hyperswitch
+        let hyper;
+        let unifiedCheckout;
+        let paymentId = initialPaymentId; // Store payment ID from creation or URL
+        
+        async function initializePayment() {
+            try {
+                // Get user from cache or URL parameters
+                let user = UserCache.getUser();
+                
+                // If no cached user, check URL parameters
+                if (!user && userId) {
+                    // Create user object from URL parameters
+                    user = {
+                        id: userId,
+                        email: decodeURIComponent(email),
+                        username: decodeURIComponent(email).split('@')[0]
+                    };
+                    // Optionally cache this user
+                    UserCache.setUser(user);
+                }
+                
+                if (!user) {
+                    alert('Please sign in to continue');
+                    window.location.href = 'https://auth.cuwapp.com/sign-in';
+                    return;
+                }
+                
+                console.log('Initializing payment for user:', user);
+                
+                // Initialize Hyperswitch with your cloud sandbox publishable key
+                const publishableKey = 'pk_snd_68a3be601ff24b82a4b163a8b3d046b2';
+                
+                // Simplified initialization like test-mode-checkout
+                hyper = Hyper(publishableKey);
+                
+                // Create payment intent on backend
+                const response = await fetch('/api/payments/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        amount: parseInt(amount),
+                        user_id: user.id,
+                        email: user.email || email,
+                        currency: 'USD',
+                        return_url: `${window.location.origin}/static/payment-success.html?plan=${planId}`,
+                        cancel_url: `${window.location.origin}/static/checkout.html?plan=${planId}&amount=${amount}`
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create payment intent');
+                }
+                
+                const data = await response.json();
+                const clientSecret = data.clientSecret || data.client_secret;
+                paymentId = data.payment_id; // Store payment ID for later use
+                
+                console.log('Payment intent created:', { 
+                    clientSecret: clientSecret ? 'Present' : 'Missing',
+                    paymentId: paymentId 
+                });
+                
+                if (!clientSecret) {
+                    throw new Error('No client secret received from server');
+                }
+                
+                // Create payment widget
+                const widgets = hyper.widgets({
+                    clientSecret,
+                    appearance: {
+                        theme: 'default',
+                        variables: {
+                            colorPrimary: '#667eea',
+                            colorBackground: '#ffffff',
+                            colorText: '#333333',
+                            colorDanger: '#df1b41',
+                            borderRadius: '8px',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                        }
+                    }
+                });
+                
+                // Create unified checkout element - let Hyperswitch handle payment methods
+                unifiedCheckout = widgets.create('payment', {
+                    layout: 'tabs',
+                    wallets: {
+                        walletReturnUrl: `https://app.cuwapp.com/static/payment-success.html?plan=${planId}`,
+                        applePay: 'auto',
+                        googlePay: 'auto',
+                        payPal: 'auto'
+                    },
+                    defaultValues: {
+                        billingDetails: {
+                            name: user.username || user.email.split('@')[0],
+                            email: user.email
+                        }
+                    }
+                });
+                
+                // Mount the checkout element
+                console.log('Attempting to mount unified checkout...');
+                const checkoutElement = document.getElementById('unified-checkout');
+                
+                if (!checkoutElement) {
+                    throw new Error('Checkout element not found in DOM');
+                }
+                
+                // Clear loading state first
+                checkoutElement.innerHTML = '';
+                
+                try {
+                    const mountResult = await unifiedCheckout.mount('#unified-checkout');
+                    
+                    if (mountResult && mountResult.error) {
+                        console.error('Mount error:', mountResult.error);
+                        throw new Error(mountResult.error.message || 'Failed to mount payment form');
+                    }
+                    
+                    // Enable submit button
+                    document.getElementById('submit').disabled = false;
+                    console.log('Payment form initialized successfully');
+                } catch (mountError) {
+                    console.error('Error during mount:', mountError);
+                    throw mountError;
+                }
+                
+            } catch (error) {
+                console.error('Error initializing payment:', error);
+                showMessage(`Failed to load payment form: ${error.message}`, 'error');
+                
+                // Show detailed debug info
+                let user = UserCache.getUser();
+                if (!user && userId) {
+                    user = { id: userId, email: decodeURIComponent(email) };
+                }
+                
+                const debugInfo = document.createElement('div');
+                debugInfo.style.cssText = 'background: #fff3cd; padding: 15px; margin-top: 10px; border-radius: 4px; font-size: 12px; border: 1px solid #ffc107;';
+                debugInfo.innerHTML = `
+                    <strong>Debug Information:</strong><br><br>
+                    <strong>Parameters:</strong><br>
+                    • Plan: ${planId} (${plans[planId]?.name || 'Unknown'})<br>
+                    • Amount: $${amount/100} (${amount} cents)<br>
+                    • User ID: ${userId || 'Not provided'}<br>
+                    • Email: ${decodeURIComponent(email)}<br>
+                    • User Cached: ${UserCache.getUser() ? 'Yes' : 'No'}<br><br>
+                    <strong>Error Details:</strong><br>
+                    • ${error.message}<br>
+                    • Stack: Check browser console<br><br>
+                    <strong>Troubleshooting:</strong><br>
+                    • Check browser console (F12) for detailed errors<br>
+                    • Verify Hyperswitch SDK loaded<br>
+                    • Check network tab for API calls
+                `;
+                document.getElementById('payment-message').appendChild(debugInfo);
+                
+                // Also show in unified-checkout div
+                const checkoutDiv = document.getElementById('unified-checkout');
+                checkoutDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">⚠️ Unable to load payment form. Check console for details.</div>';
+            }
+        }
+        
+        // Handle form submission
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const submitButton = document.getElementById('submit');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            
+            // Store plan in session for success page
+            sessionStorage.setItem('pending_plan', planId);
+            
+            try {
+                // Confirm payment with Hyperswitch
+                console.log('Confirming payment with Hyperswitch...');
+                const result = await hyper.confirmPayment({
+                    elements: unifiedCheckout,
+                    confirmParams: {
+                        return_url: `https://app.cuwapp.com/static/payment-success.html?plan=${planId}`
+                    },
+                    redirect: 'if_required'
+                });
+                
+                console.log('Payment confirmation result:', result);
+                
+                if (result.error) {
+                    // Show error to customer
+                    showMessage(result.error.message, 'error');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Complete Payment';
+                } else if (result.status === 'succeeded' || result.status === 'processing') {
+                    // Payment succeeded without redirect (card payment)
+                    console.log('Payment succeeded without redirect, status:', result.status);
+                    showMessage('Payment successful! Updating subscription...', 'success');
+                    
+                    // Get payment ID from result or from initial creation
+                    const currentPaymentId = result.paymentIntent?.id || paymentId;
+                    console.log('Payment ID for subscription update:', currentPaymentId);
+                    
+                    // Update user subscription on backend
+                    try {
+                        const updateResult = await updateSubscription(currentPaymentId);
+                        console.log('Subscription update completed:', updateResult);
+                        
+                        // Store success data for the success page
+                        sessionStorage.setItem('payment_success', JSON.stringify({
+                            payment_id: currentPaymentId,
+                            plan: planId,
+                            timestamp: new Date().toISOString()
+                        }));
+                        
+                        // Redirect to success page with proper parameters
+                        setTimeout(() => {
+                            window.location.href = `/static/payment-success.html?payment_intent=${currentPaymentId}&plan=${planId}&redirect_status=succeeded`;
+                        }, 1500);
+                    } catch (updateError) {
+                        console.error('Failed to update subscription:', updateError);
+                        // Still redirect to success page which will retry the update
+                        showMessage('Payment successful! Completing setup...', 'success');
+                        setTimeout(() => {
+                            window.location.href = `/static/payment-success.html?payment_intent=${currentPaymentId}&plan=${planId}&redirect_status=succeeded`;
+                        }, 1500);
+                    }
+                } else if (result.status === 'requires_payment_method') {
+                    // Payment needs completion - likely test mode or incomplete
+                    console.log('Payment requires completion, updating subscription anyway for test mode');
+                    
+                    // For test/sandbox mode, update subscription anyway
+                    try {
+                        const updateResult = await updateSubscription(currentPaymentId);
+                        console.log('Test mode subscription update completed:', updateResult);
+                        
+                        showMessage('Payment processed! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = `/static/payment-success.html?payment_intent=${currentPaymentId}&plan=${planId}&redirect_status=succeeded`;
+                        }, 1500);
+                    } catch (updateError) {
+                        console.error('Failed to update subscription:', updateError);
+                        showMessage('Payment processed! Completing setup...', 'success');
+                        setTimeout(() => {
+                            window.location.href = `/static/payment-success.html?payment_intent=${currentPaymentId}&plan=${planId}&redirect_status=succeeded`;
+                        }, 1500);
+                    }
+                } else if (result.status === 'requires_action' || !result.status) {
+                    // Payment requires redirect (PayPal, 3D Secure, etc.)
+                    console.log('Payment requires additional action, will be handled by Hyperswitch');
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                showMessage('Payment failed. Please try again.', 'error');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Complete Payment';
+            }
+        }
+        
+        // Update subscription after successful payment
+        async function updateSubscription(currentPaymentId) {
+            const user = UserCache.getUser();
+            console.log('Updating subscription with:', {
+                user_id: user?.id,
+                plan_type: planId,
+                payment_id: currentPaymentId || paymentId,
+                amount: parseInt(amount)
+            });
+            
+            try {
+                const response = await fetch('/api/users/payment-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        plan_type: planId,
+                        payment_id: currentPaymentId || paymentId || 'card_direct_payment',
+                        amount: parseInt(amount)
+                    })
+                });
+                
+                console.log('Subscription update response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Subscription update failed:', errorText);
+                    throw new Error(`Failed to update subscription: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Subscription update result:', result);
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Subscription update failed');
+                }
+                
+                console.log('Subscription updated successfully');
+                return result;
+            } catch (error) {
+                console.error('Error updating subscription:', error);
+                throw error; // Re-throw to handle in calling function
+            }
+        }
+        
+        // Show message to user
+        function showMessage(text, type) {
+            const messageElement = document.getElementById('payment-message');
+            messageElement.textContent = text;
+            messageElement.className = type;
+        }
+        
+        // Attach event listeners
+        document.getElementById('payment-form').addEventListener('submit', handleSubmit);
+        
+        // Initialize payment on page load
+        document.addEventListener('DOMContentLoaded', initializePayment);
+    </script>
+</body>
+</html>

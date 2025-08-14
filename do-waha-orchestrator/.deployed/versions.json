@@ -1,0 +1,18 @@
+[
+  {
+    "apihost": "https://faas-nyc1-2ef2e6cc.doserverless.co",
+    "namespace": "fn-a71361db-f473-4bce-a159-0c0d9d3aa3b5",
+    "packageVersions": {
+      "waha-manager": {
+        "version": "0.0.5",
+        "digest": "5fc10f1edfd9d8f9d59d8874b4d8d92095b6c235a45b4b492e9f3d9547ba3c07"
+      }
+    },
+    "actionVersions": {
+      "waha-manager/waha-manager": {
+        "version": "0.0.4",
+        "digest": "d80466a49f8fa6ed5a1458c460dbd924e5b6c3aea7c64e972908f6f7b924d7a9"
+      }
+    }
+  }
+]

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Agent Builder</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 WhatsApp Agent Builder</h1>
+            <p>Build intelligent WhatsApp agents powered by Google ADK</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Agent List Section -->
+            <section class="agents-section">
+                <div class="section-header">
+                    <h2>My Agents</h2>
+                    <button class="btn btn-primary" onclick="showCreateAgent()">+ Create New Agent</button>
+                </div>
+                <div id="agents-list" class="agents-grid">
+                    <!-- Agents will be loaded here -->
+                    <div class="loading">Loading agents...</div>
+                </div>
+            </section>
+
+            <!-- Create/Edit Agent Form -->
+            <section id="agent-form" class="agent-form hidden">
+                <h2 id="form-title">Create New Agent</h2>
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-group">
+                        <label for="agent-name">Agent Name</label>
+                        <input type="text" id="agent-name" placeholder="e.g., Customer Support Bot" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agent-description">Description</label>
+                        <textarea id="agent-description" rows="3" placeholder="What does this agent do?"></textarea>
+                    </div>
+                </div>
+
+                <!-- Triggers Selection -->
+                <div class="form-section">
+                    <h3>Select Triggers</h3>
+                    <p class="help-text">Choose which WhatsApp events will activate this agent</p>
+                    <div id="triggers-list" class="triggers-grid">
+                        <!-- Triggers will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Trigger-Specific Instructions -->
+                <div class="form-section">
+                    <h3>Trigger Instructions</h3>
+                    <p class="help-text">Define specific behavior for each selected trigger</p>
+                    <div id="trigger-instructions">
+                        <!-- Dynamic instruction fields will appear here -->
+                    </div>
+                </div>
+
+                <!-- Tools Selection -->
+                <div class="form-section">
+                    <h3>Select Tools</h3>
+                    <div class="tools-tabs">
+                        <button class="tab-btn active" onclick="showToolCategory('waha')">📡 WAHA Tools</button>
+                        <button class="tab-btn" onclick="showToolCategory('builtin')">🛠️ Built-in Tools</button>
+                        <button class="tab-btn" onclick="showToolCategory('mcp')">🔧 MCP Tools</button>
+                        <button class="tab-btn" onclick="showToolCategory('custom')">⚡ Custom Tools</button>
+                    </div>
+                    <div id="tools-list" class="tools-grid">
+                        <!-- Tools will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Additional Instructions -->
+                <div class="form-section">
+                    <h3>Additional Instructions</h3>
+                    <p class="help-text">General instructions that apply regardless of trigger</p>
+                    <textarea id="additional-instructions" rows="5" 
+                        placeholder="e.g., Always be polite and professional. Never share personal information..."></textarea>
+                </div>
+
+                <!-- Model Configuration -->
+                <div class="form-section">
+                    <h3>Model Configuration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="model-select">AI Model</label>
+                            <select id="model-select">
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="temperature">Temperature</label>
+                            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+                            <span id="temperature-value">0.7</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button class="btn btn-secondary" onclick="cancelAgentForm()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveAgent()">Save Agent</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

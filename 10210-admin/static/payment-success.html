@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - CuWhapp</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .success-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            margin: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.5s ease-out;
+        }
+        .checkmark {
+            color: white;
+            font-size: 48px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .message {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .details {
+            background: #f7f8fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .detail-label {
+            color: #999;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .loading {
+            display: none;
+        }
+        .loading.active {
+            display: block;
+        }
+        .error-message {
+            color: #f44336;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 5px;
+            margin: 20px 0;
+            display: none;
+        }
+        .error-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">
+            <span class="checkmark">✓</span>
+        </div>
+        
+        <h1>Payment Successful!</h1>
+        <p class="message">Your subscription has been upgraded successfully.</p>
+        
+        <div class="details" id="payment-details">
+            <div class="detail-row">
+                <span class="detail-label">Payment ID:</span>
+                <span class="detail-value" id="payment-id">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Plan:</span>
+                <span class="detail-value" id="plan-name">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value" style="color: #4CAF50;">Active</span>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            Updating your subscription...
+        </div>
+        
+        <div class="error-message" id="error-message"></div>
+        
+        <div>
+            <a href="/" class="btn">Go to Dashboard</a>
+            <a href="/billing" class="btn btn-secondary">View Billing</a>
+        </div>
+    </div>
+    
+    <script src="/static/js/user-cache.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentIntent = urlParams.get('payment_intent');
+        const paymentIntentClientSecret = urlParams.get('payment_intent_client_secret');
+        const directPaymentId = urlParams.get('payment_id'); // Direct payment ID from card payments
+        const redirectStatus = urlParams.get('redirect_status');
+        
+        // Extract payment ID from various sources
+        const paymentId = paymentIntent || directPaymentId || (paymentIntentClientSecret ? paymentIntentClientSecret.split('_secret_')[0] : null);
+        
+        // Get plan from URL or storage
+        const planId = urlParams.get('plan') || sessionStorage.getItem('pending_plan');
+        
+        // Plan mapping
+        const plans = {
+            starter: { name: 'Starter Plan', price: 7 },
+            hobby: { name: 'Hobby Plan', price: 20 },
+            pro: { name: 'Pro Plan', price: 45 },
+            premium: { name: 'Premium Plan', price: 99 }
+        };
+        
+        // Display payment details
+        if (paymentId) {
+            document.getElementById('payment-id').textContent = paymentId;
+            console.log('Displaying payment ID:', paymentId);
+        } else {
+            console.warn('No payment ID found in URL parameters');
+            // Try to get from session storage
+            const storedSuccess = sessionStorage.getItem('payment_success');
+            if (storedSuccess) {
+                const data = JSON.parse(storedSuccess);
+                document.getElementById('payment-id').textContent = data.payment_id;
+                console.log('Using stored payment ID:', data.payment_id);
+            }
+        }
+        
+        if (planId && plans[planId]) {
+            document.getElementById('plan-name').textContent = plans[planId].name;
+            console.log('Displaying plan:', plans[planId].name);
+        } else {
+            console.warn('No plan ID found or invalid plan:', planId);
+        }
+        
+        // Update subscription in database
+        async function updateSubscription() {
+            const user = UserCache.getUser();
+            
+            if (!user || !paymentId || !planId) {
+                console.error('Missing required data for subscription update');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            
+            try {
+                // Call payment success endpoint
+                const response = await fetch('/api/users/payment-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payment_id: paymentId,
+                        user_id: user.id,
+                        plan_type: planId,
+                        amount: plans[planId]?.price * 100
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Subscription updated successfully');
+                    
+                    // Update user cache with new plan
+                    user.plan = planId;
+                    UserCache.setUser(user);
+                    
+                    // Clear pending plan
+                    sessionStorage.removeItem('pending_plan');
+                    
+                    // Show success message
+                    document.getElementById('loading').classList.remove('active');
+                } else {
+                    throw new Error(result.message || 'Failed to update subscription');
+                }
+                
+            } catch (error) {
+                console.error('Error updating subscription:', error);
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('error-message').textContent = 
+                    'Note: Payment successful but subscription update pending. Please refresh the dashboard.';
+                document.getElementById('error-message').classList.add('active');
+            }
+        }
+        
+        // Check redirect status
+        if (redirectStatus === 'succeeded' || redirectStatus === 'processing') {
+            updateSubscription();
+        } else if (!redirectStatus && paymentId) {
+            // Direct success redirect
+            updateSubscription();
+        }
+    </script>
+</body>
+</html>

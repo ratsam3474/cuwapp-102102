@@ -1,0 +1,22 @@
+packages:
+  - name: waha-manager
+    environment:
+      # Docker credentials
+      DOCKER_USERNAME: ${DOCKER_USERNAME}
+      DOCKER_TOKEN: ${DOCKER_TOKEN}
+      # Redis connection
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: "${REDIS_PORT}"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # WAHA defaults
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      # Docker droplet (optional, can be passed in request)
+      DOCKER_HOST: ${DOCKER_HOST}
+    functions:
+      - name: waha-manager
+        runtime: python:3.11
+        web: true
+        limits:
+          timeout: 30000
+          memory: 512

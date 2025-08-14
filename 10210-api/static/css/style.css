@@ -1,0 +1,737 @@
+/* Custom Styles for WhatsApp Agent */
+
+:root {
+    --primary-green: #1a4d2e;  /* Dark green - brand color */
+    --secondary-green: #0f3d0f; /* Darker green */
+    --accent-green: #2d5f3f;    /* Medium dark green */
+    --brand-black: #000000;     /* Black */
+    --light-grey: #f8f9fa;
+    --whatsapp-grey: #ECE5DD;
+}
+
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navigation */
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.bg-success {
+    background: linear-gradient(135deg, var(--primary-green), var(--secondary-green)) !important;
+}
+
+.bg-primary {
+    background-color: var(--primary-green) !important;
+}
+
+.btn-primary {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: #ffffff !important;  /* White text for primary buttons */
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-green);
+    border-color: var(--accent-green);
+    color: #ffffff !important;  /* Keep white text on hover */
+}
+
+.text-primary {
+    color: var(--primary-green) !important;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+}
+
+/* Session Cards */
+.session-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.session-card:hover {
+    border-color: var(--primary-green) !important;
+    box-shadow: 0 4px 12px rgba(26, 77, 46, 0.2) !important;
+}
+
+/* Status badges with brand colors */
+.badge.bg-success {
+    background: var(--primary-green) !important;
+}
+
+.badge.bg-danger {
+    background: var(--brand-black) !important;
+}
+
+.badge.bg-warning {
+    background: var(--accent-green) !important;
+    color: white !important;
+}
+
+/* Buttons */
+.btn-success {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    color: #000000 !important;  /* Black text for all success buttons */
+}
+
+.btn-success:hover {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+    color: #000000 !important;  /* Keep black text on hover */
+}
+
+/* Progress bars */
+.progress-bar {
+    background: linear-gradient(90deg, var(--primary-green), var(--accent-green));
+}
+
+/* Form controls */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 0.25rem rgba(26, 77, 46, 0.25);
+}
+
+.session-card:hover {
+    border-color: var(--whatsapp-green);
+    transform: scale(1.02);
+}
+
+.session-status {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+}
+
+.status-working {
+    background-color: var(--whatsapp-light-green);
+    color: var(--whatsapp-dark-green);
+}
+
+.status-starting {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-stopped {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* QR Code Section */
+.qr-container {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 2px dashed #dee2e6;
+    display: inline-block;
+}
+
+#qr-image {
+    max-width: 200px;
+    height: auto;
+}
+
+/* Chat Interface */
+.chat-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+
+.chat-item:hover {
+    background-color: var(--whatsapp-grey);
+    border-left-color: var(--whatsapp-green);
+}
+
+.chat-item.active {
+    background-color: var(--whatsapp-light-green);
+    border-left-color: var(--whatsapp-green);
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.chat-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.chat-last-message {
+    color: #666;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-time {
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.unread-count {
+    background-color: var(--whatsapp-green);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Messages */
+.message {
+    max-width: 70%;
+    margin-bottom: 1rem;
+    word-wrap: break-word;
+}
+
+.message-sent {
+    align-self: flex-end;
+    background-color: var(--whatsapp-light-green);
+    border-radius: 18px 18px 4px 18px;
+}
+
+.message-received {
+    align-self: flex-start;
+    background-color: white;
+    border-radius: 18px 18px 18px 4px;
+    border: 1px solid #e9ecef;
+}
+
+.message-content {
+    padding: 0.75rem 1rem;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    color: #666;
+    text-align: right;
+    padding: 0 1rem 0.5rem;
+}
+
+.message-from {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--whatsapp-dark-green);
+    margin-bottom: 0.25rem;
+}
+
+/* Contact Cards */
+.contact-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+
+.contact-card:hover {
+    border-left-color: var(--whatsapp-green);
+    background-color: rgba(37, 211, 102, 0.05);
+}
+
+.contact-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.contact-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.contact-phone {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Group Cards */
+.group-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.group-card:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.group-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--whatsapp-green), var(--whatsapp-blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+/* Form Controls */
+.form-control:focus, .form-select:focus {
+    border-color: var(--whatsapp-green);
+    box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+}
+
+/* Buttons */
+.btn-success {
+    background-color: var(--whatsapp-green);
+    border-color: var(--whatsapp-green);
+}
+
+.btn-success:hover {
+    background-color: var(--whatsapp-dark-green);
+    border-color: var(--whatsapp-dark-green);
+}
+
+.btn-outline-success {
+    color: var(--whatsapp-green);
+    border-color: var(--whatsapp-green);
+}
+
+.btn-outline-success:hover {
+    background-color: var(--whatsapp-green);
+    border-color: var(--whatsapp-green);
+}
+
+/* Badges */
+.badge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+}
+
+/* Loading Animation */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Status Indicators */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.status-online {
+    background-color: #28a745;
+    box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+}
+
+.status-offline {
+    background-color: #dc3545;
+}
+
+.status-connecting {
+    background-color: #ffc107;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+/* File Upload Area */
+.file-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: var(--whatsapp-green);
+    background-color: rgba(37, 211, 102, 0.05);
+}
+
+.file-upload-area.dragover {
+    border-color: var(--whatsapp-green);
+    background-color: rgba(37, 211, 102, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0.5rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .message {
+        max-width: 85%;
+    }
+    
+    #qr-image {
+        max-width: 150px;
+    }
+}
+
+/* Toast Notifications */
+.toast {
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.toast-success {
+    border-left: 4px solid #28a745;
+}
+
+.toast-error {
+    border-left: 4px solid #dc3545;
+}
+
+.toast-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.toast-info {
+    border-left: 4px solid #17a2b8;
+}
+
+/* Animation for new elements */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Search Highlight */
+.highlight {
+    background-color: yellow;
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.dropdown-item:hover {
+    background-color: var(--whatsapp-light-green);
+    color: var(--whatsapp-dark-green);
+}
+
+/* Action Buttons */
+.action-btn {
+    border: none;
+    background: none;
+    color: #666;
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background-color: var(--whatsapp-light-green);
+    color: var(--whatsapp-dark-green);
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+/* Connection Status */
+.connection-status {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1000;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.connection-online {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.connection-offline {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Campaign Wizard Styles */
+.wizard-step-indicator {
+    text-align: center;
+    position: relative;
+    flex: 1;
+}
+
+.wizard-step-indicator .badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin: 0 auto 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.wizard-step-indicator.active .badge {
+    background-color: var(--whatsapp-green) !important;
+    transform: scale(1.1);
+}
+
+.wizard-step {
+    min-height: 400px;
+    animation: fadeInStep 0.4s ease-in;
+}
+
+@keyframes fadeInStep {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.campaign-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+}
+
+.campaign-card:hover {
+    border-left-color: var(--whatsapp-green);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.campaign-status {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.status-running {
+    background-color: var(--whatsapp-light-green);
+    color: var(--whatsapp-dark-green);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.sample-input .input-group-text {
+    background-color: var(--whatsapp-light-green);
+    border-color: var(--whatsapp-green);
+    color: var(--whatsapp-dark-green);
+    font-weight: 600;
+    min-width: 80px;
+}
+
+/* WhatsApp Message Preview Styles */
+.whatsapp-message-preview {
+    position: relative;
+    max-width: 85%;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.whatsapp-message-preview:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+#modal-template-preview .card {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Close button hover effect */
+#modal-template-preview .btn-close:hover {
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+}
+
+/* WhatsApp Warmer Styles */
+.warmer-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.warmer-card.active {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.warmer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.warmer-stats {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.metric-card {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #dc3545;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    transition: background 0.3s;
+}
+
+.conversation-item:hover {
+    background: #f8f9fa;
+}
+
+.conversation-item:last-child {
+    border-bottom: none;
+}
+
+/* Warmer Session Checkbox Styles */
+#warmer-session-checkboxes .form-check {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+#warmer-session-checkboxes .form-check:hover {
+    background: #e9ecef;
+}
+
+#warmer-session-checkboxes .form-check-input {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+    margin-right: 10px;
+    cursor: pointer;
+    border: 2px solid #dc3545;
+}
+
+#warmer-session-checkboxes .form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+#warmer-session-checkboxes .form-check-label {
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* Fix Bootstrap checkbox alignment */
+#warmer-session-checkboxes .form-check {
+    display: flex;
+    align-items: center;
+    min-height: auto;
+    padding-left: 0;
+}
+
+#warmer-session-checkboxes .form-check-input[type="checkbox"] {
+    float: none;
+    margin-left: 10px;
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Cache Status</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .found { color: green; }
+        .missing { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Cache Status Check</h1>
+    <button onclick="checkCache()">Check Cache</button>
+    <button onclick="clearCache()">Clear Cache</button>
+    <button onclick="window.location.href='https://auth.cuwapp.com/sync-session'">Sync Session</button>
+    <div id="output"></div>
+    
+    <script>
+        function checkCache() {
+            const output = document.getElementById('output');
+            let html = '<h2>LocalStorage Contents:</h2>';
+            
+            // Check main cache
+            const userCache = localStorage.getItem('cuwhapp_user_cache');
+            if (userCache) {
+                try {
+                    const user = JSON.parse(userCache);
+                    html += '<div class="found">';
+                    html += '<h3>✓ cuwhapp_user_cache found:</h3>';
+                    html += '<pre>' + JSON.stringify(user, null, 2) + '</pre>';
+                    html += '</div>';
+                } catch (e) {
+                    html += '<div class="missing">Invalid JSON in cuwhapp_user_cache</div>';
+                }
+            } else {
+                html += '<div class="missing">✗ cuwhapp_user_cache not found</div>';
+            }
+            
+            // Check whatsapp_agent_user
+            const waUser = localStorage.getItem('whatsapp_agent_user');
+            if (waUser) {
+                try {
+                    const user = JSON.parse(waUser);
+                    html += '<div class="found">';
+                    html += '<h3>✓ whatsapp_agent_user found:</h3>';
+                    html += '<pre>' + JSON.stringify(user, null, 2) + '</pre>';
+                    html += '</div>';
+                } catch (e) {
+                    html += '<div class="missing">Invalid JSON in whatsapp_agent_user</div>';
+                }
+            } else {
+                html += '<div class="missing">✗ whatsapp_agent_user not found</div>';
+            }
+            
+            // Check subscription
+            const subscription = localStorage.getItem('user_subscription');
+            if (subscription) {
+                html += '<div class="found">✓ user_subscription found</div>';
+            } else {
+                html += '<div class="missing">✗ user_subscription not found</div>';
+            }
+            
+            output.innerHTML = html;
+        }
+        
+        function clearCache() {
+            localStorage.removeItem('cuwhapp_user_cache');
+            localStorage.removeItem('whatsapp_agent_user');
+            localStorage.removeItem('user_subscription');
+            alert('Cache cleared!');
+            checkCache();
+        }
+        
+        // Auto-check on load
+        window.onload = checkCache;
+    </script>
+</body>
+</html>

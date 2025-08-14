@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mode Checkout - CuWhapp</title>
+    <script src="https://beta.hyperswitch.io/v1/HyperLoader.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .test-badge {
+            background: #10b981;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 0 auto 20px;
+            width: fit-content;
+            font-weight: bold;
+        }
+        .test-info {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .test-info h3 {
+            margin-top: 0;
+            color: #047857;
+        }
+        .test-info code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #payment-element {
+            margin: 30px 0;
+            min-height: 300px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .message.show {
+            display: block;
+        }
+        .message.error {
+            background: #fee;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+        .message.success {
+            background: #f0fdf4;
+            color: #14532d;
+            border: 1px solid #86efac;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Mode Checkout</h1>
+        <div class="test-badge">TEST MODE ACTIVE</div>
+        
+        <div class="test-info">
+            <h3>Test Card Details:</h3>
+            <p><strong>Card Number:</strong> <code>4242 4242 4242 4242</code></p>
+            <p><strong>Expiry:</strong> <code>12/25</code> (or any future date)</p>
+            <p><strong>CVV:</strong> <code>123</code> (any 3 digits)</p>
+            <p><strong>ZIP:</strong> <code>12345</code> (any valid ZIP)</p>
+        </div>
+        
+        <div id="payment-element">
+            <!-- Payment form will be mounted here -->
+        </div>
+        
+        <button id="submit" disabled>Complete Test Payment - $7.00</button>
+        
+        <div id="message" class="message"></div>
+    </div>
+    
+    <script>
+        // Test mode configuration
+        const TEST_MODE = true;
+        const publishableKey = 'pk_snd_68a3be601ff24b82a4b163a8b3d046b2';
+        
+        let hyper;
+        let elements;
+        let paymentElement;
+        
+        // Initialize immediately
+        initializeTestPayment();
+        
+        async function initializeTestPayment() {
+            try {
+                console.log('Initializing test mode payment...');
+                
+                // Initialize Hyperswitch
+                hyper = Hyper(publishableKey);
+                
+                // Create a test payment intent directly with Hyperswitch
+                // In test mode, we can use a simplified flow
+                const testClientSecret = await createTestPaymentIntent();
+                
+                if (!testClientSecret) {
+                    showMessage('Failed to create test payment', 'error');
+                    return;
+                }
+                
+                // Create elements with the test client secret
+                const appearance = {
+                    theme: 'default',
+                    variables: {
+                        colorPrimary: '#667eea',
+                        colorBackground: '#ffffff',
+                        borderRadius: '8px'
+                    }
+                };
+                
+                elements = hyper.elements({ 
+                    clientSecret: testClientSecret,
+                    appearance 
+                });
+                
+                // Create and mount the payment element
+                paymentElement = elements.create('payment', {
+                    layout: 'tabs',
+                    defaultValues: {
+                        billingDetails: {
+                            name: 'Test User',
+                            email: 'test@example.com'
+                        }
+                    }
+                });
+                
+                await paymentElement.mount('#payment-element');
+                
+                // Enable submit button
+                document.getElementById('submit').disabled = false;
+                console.log('Test payment form ready!');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showMessage('Failed to initialize: ' + error.message, 'error');
+            }
+        }
+        
+        async function createTestPaymentIntent() {
+            try {
+                // Try to create via backend first
+                const response = await fetch('/api/payments/create-payment-intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan_id: 'starter',
+                        amount: 700,
+                        user_id: 'test_user',
+                        email: 'test@example.com',
+                        return_url: window.location.origin + '/static/payment-success.html',
+                        cancel_url: window.location.href
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.clientSecret || data.client_secret;
+                }
+            } catch (error) {
+                console.log('Backend unavailable, using test mode');
+            }
+            
+            // Fallback to test client secret
+            return 'test_secret_for_testing';
+        }
+        
+        // Handle form submission
+        document.getElementById('submit').addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            const button = document.getElementById('submit');
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            try {
+                const { error, paymentIntent } = await hyper.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: window.location.origin + '/static/payment-success.html?test=true',
+                    },
+                    redirect: 'if_required'
+                });
+                
+                if (error) {
+                    // Show error to customer
+                    console.error('Payment error:', error);
+                    showMessage(error.message || 'Payment failed', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Complete Test Payment - $7.00';
+                } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                    showMessage('Test payment successful! ✅', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/static/payment-success.html?test=true';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Submit error:', err);
+                showMessage('An error occurred: ' + err.message, 'error');
+                button.disabled = false;
+                button.textContent = 'Complete Test Payment - $7.00';
+            }
+        });
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message show ${type}`;
+        }
+    </script>
+</body>
+</html>

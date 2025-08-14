@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Processing - CuWhapp</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .success-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            margin: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+        .success-icon, .error-icon, .processing-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.5s ease-out;
+        }
+        .success-icon {
+            background: #4CAF50;
+        }
+        .error-icon {
+            background: #f44336;
+        }
+        .processing-icon {
+            background: #ff9800;
+        }
+        .checkmark, .error-mark, .processing-mark {
+            color: white;
+            font-size: 48px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .message {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .details {
+            background: #f7f8fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .detail-label {
+            color: #999;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .loading {
+            display: none;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-checking {
+            display: none;
+        }
+        .status-checking.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <!-- Status Checking State -->
+        <div id="status-checking" class="status-checking active">
+            <div class="processing-icon">
+                <span class="processing-mark">⏳</span>
+            </div>
+            <h1>Verifying Payment...</h1>
+            <div class="spinner"></div>
+            <p class="message">Please wait while we confirm your payment</p>
+        </div>
+        
+        <!-- Success State -->
+        <div id="success-state" style="display: none;">
+            <div class="success-icon">
+                <span class="checkmark">✓</span>
+            </div>
+            <h1>Payment Successful!</h1>
+            <p class="message">Your subscription has been upgraded successfully.</p>
+            
+            <div class="details">
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID:</span>
+                    <span class="detail-value" id="payment-id">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Plan:</span>
+                    <span class="detail-value" id="plan-name">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method:</span>
+                    <span class="detail-value" id="payment-method">-</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value" id="payment-status">Active</span>
+                </div>
+            </div>
+            
+            <div>
+                <a href="/" class="btn">Go to Dashboard</a>
+                <a href="/billing" class="btn btn-secondary">View Billing</a>
+            </div>
+        </div>
+        
+        <!-- Error State -->
+        <div id="error-state" style="display: none;">
+            <div class="error-icon">
+                <span class="error-mark">✕</span>
+            </div>
+            <h1>Payment Failed</h1>
+            <p class="message" id="error-message">The payment could not be processed.</p>
+            
+            <div>
+                <a href="javascript:history.back()" class="btn">Try Again</a>
+                <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/user-cache.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('plan');
+        const method = urlParams.get('method'); // 'stripe' or 'crypto'
+        
+        // Plan mapping
+        const plans = {
+            starter: { name: 'Starter Plan', price: 7 },
+            hobby: { name: 'Hobby Plan', price: 20 },
+            pro: { name: 'Pro Plan', price: 45 },
+            premium: { name: 'Premium Plan', price: 99 }
+        };
+        
+        // Verify payment based on method
+        async function verifyPayment() {
+            const user = UserCache.getUser();
+            if (!user) {
+                showError('User session not found. Please sign in again.');
+                return;
+            }
+            
+            try {
+                let verificationUrl = '/api/direct-payments/verify-payment?';
+                let paymentId = '';
+                
+                if (method === 'stripe') {
+                    // Stripe returns session_id
+                    const sessionId = urlParams.get('session_id');
+                    if (!sessionId) {
+                        showError('No Stripe session ID found');
+                        return;
+                    }
+                    verificationUrl += `session_id=${sessionId}&method=stripe`;
+                    paymentId = sessionId;
+                    
+                } else if (method === 'crypto') {
+                    // Cryptomus returns order_id
+                    const orderId = urlParams.get('order_id');
+                    if (!orderId) {
+                        showError('No crypto order ID found');
+                        return;
+                    }
+                    verificationUrl += `order_id=${orderId}&method=crypto`;
+                    paymentId = orderId;
+                    
+                } else {
+                    showError('Unknown payment method');
+                    return;
+                }
+                
+                // Call our unified payment-success endpoint instead of just verification
+                const subscriptionResult = await updateSubscription(paymentId, user.id, planId);
+                
+                if (subscriptionResult === 'succeeded') {
+                    // Payment successful and plan upgraded
+                    showSuccess(paymentId, method);
+                } else if (subscriptionResult === 'processing') {
+                    // Payment still processing
+                    showProcessing();
+                    // Don't retry - show processing message
+                    document.querySelector('#status-checking .message').innerHTML = 
+                        'Your payment is being processed.<br>You will receive an email once complete.<br>' +
+                        '<small>This may take a few minutes for crypto payments.</small>';
+                } else {
+                    // Payment failed or error
+                    showError('Payment could not be verified. Please contact support if you were charged.');
+                }
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                showError('Unable to verify payment. Please contact support.');
+            }
+        }
+        
+        // Update subscription using new direct payment endpoint
+        async function updateSubscription(paymentId, userId, planId) {
+            try {
+                const response = await fetch('/api/direct-payments/payment-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payment_id: paymentId,
+                        user_id: userId,
+                        plan_type: planId,
+                        amount: plans[planId]?.price * 100,
+                        payment_method: method
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Payment result:', result);
+                    
+                    if (result.status === 'succeeded' && result.plan_upgraded) {
+                        // Plan was upgraded
+                        console.log('Subscription upgraded successfully');
+                        const user = UserCache.getUser();
+                        user.plan = planId;
+                        UserCache.setUser(user);
+                        return 'succeeded';
+                    } else if (result.status === 'processing') {
+                        // Payment still processing
+                        console.log('Payment is still processing');
+                        return 'processing';
+                    } else {
+                        return 'failed';
+                    }
+                } else {
+                    console.error('Payment verification failed:', result.message || result.error);
+                    return 'failed';
+                }
+            } catch (error) {
+                console.error('Error updating subscription:', error);
+                return 'error';
+            }
+        }
+        
+        // Show success state
+        function showSuccess(paymentId, method) {
+            document.getElementById('status-checking').style.display = 'none';
+            document.getElementById('error-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+            
+            document.getElementById('payment-id').textContent = paymentId.substring(0, 20) + '...';
+            document.getElementById('plan-name').textContent = plans[planId]?.name || 'Unknown';
+            document.getElementById('payment-method').textContent = 
+                method === 'stripe' ? 'Credit/Debit Card' : 'Cryptocurrency';
+        }
+        
+        // Show error state
+        function showError(message) {
+            document.getElementById('status-checking').style.display = 'none';
+            document.getElementById('success-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+        }
+        
+        // Show processing state
+        function showProcessing() {
+            const checking = document.getElementById('status-checking');
+            checking.querySelector('h1').textContent = 'Payment Processing...';
+            checking.querySelector('.message').textContent = 
+                'Your payment is being processed. This may take a few moments.';
+        }
+        
+        // Handle special cases
+        if (urlParams.get('error')) {
+            // Direct error from payment provider
+            showError(decodeURIComponent(urlParams.get('error')));
+        } else if (!method || !planId) {
+            // Missing required parameters
+            showError('Invalid payment parameters. Please try again.');
+        } else {
+            // Start verification
+            verifyPayment();
+        }
+    </script>
+</body>
+</html>

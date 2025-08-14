@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAHA Instance Monitoring - CuWhapp Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .instance-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        .free-instance {
+            border-left-color: #28a745;
+        }
+        .paid-instance {
+            border-left-color: #ffc107;
+        }
+        .progress-custom {
+            height: 25px;
+            border-radius: 10px;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .revenue-positive {
+            color: #28a745;
+        }
+        .revenue-negative {
+            color: #dc3545;
+        }
+        .recommendation {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            background: #f8f9fa;
+        }
+        .scaling-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .scaling-good { background: #28a745; }
+        .scaling-warning { background: #ffc107; }
+        .scaling-critical { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="text-center mb-4">
+            <h1 class="text-white"><i class="fab fa-docker"></i> WAHA Instance Monitoring</h1>
+            <p class="text-white-50">Real-time monitoring of WhatsApp instances and scaling metrics</p>
+        </div>
+
+        <!-- Overview Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h6 class="text-muted">Total Instances</h6>
+                    <div class="stat-number" id="total-instances">-</div>
+                    <small class="text-muted">Docker containers</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h6 class="text-muted">Total Capacity</h6>
+                    <div class="stat-number" id="total-capacity">-</div>
+                    <small class="text-muted">Maximum sessions</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h6 class="text-muted">Active Sessions</h6>
+                    <div class="stat-number" id="active-sessions">-</div>
+                    <small class="text-muted">Currently connected</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h6 class="text-muted">Overall Utilization</h6>
+                    <div class="stat-number" id="utilization">-%</div>
+                    <div class="progress progress-custom mt-2">
+                        <div class="progress-bar" id="utilization-bar" role="progressbar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue & Scaling Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5><i class="fas fa-dollar-sign"></i> Revenue Metrics</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1">Monthly Revenue</p>
+                            <h3 class="revenue-positive" id="monthly-revenue">$0</h3>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1">Infrastructure Cost</p>
+                            <h3 class="revenue-negative" id="infra-cost">$0</h3>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <p class="mb-1">Profit Margin</p>
+                        <h3 id="profit-margin">$0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5><i class="fas fa-chart-line"></i> Scaling Status</h5>
+                    <hr>
+                    <div id="scaling-triggers">
+                        <div class="mb-2">
+                            <span class="scaling-indicator" id="capacity-indicator"></span>
+                            <span>Capacity Threshold (80%): <span id="capacity-status">-</span></span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="scaling-indicator" id="revenue-indicator"></span>
+                            <span>Revenue Threshold ($500): <span id="revenue-status">-</span></span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="scaling-indicator" id="scale-indicator"></span>
+                            <span>Should Scale Now: <span id="scale-status">-</span></span>
+                        </div>
+                    </div>
+                    <div id="recommendations" class="mt-3">
+                        <!-- Recommendations will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instance Details -->
+        <div class="metric-card">
+            <h5><i class="fas fa-server"></i> WAHA Instances</h5>
+            <hr>
+            <div id="instances-list">
+                <!-- Instance cards will be added here -->
+            </div>
+        </div>
+
+        <!-- Free Sessions Management -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5><i class="fas fa-users"></i> Free User Sessions</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1">Active Free Sessions</p>
+                            <h4 id="free-active">0</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1">Auto-Deleted (30min)</p>
+                            <h4 id="free-deleted">0</h4>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning mt-3" onclick="triggerCleanup()">
+                        <i class="fas fa-broom"></i> Trigger Manual Cleanup
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <h5><i class="fas fa-users-cog"></i> Subscription Distribution</h5>
+                    <hr>
+                    <div id="subscription-dist">
+                        <!-- Subscription counts will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto-refresh indicator -->
+        <div class="text-center mt-4">
+            <small class="text-white">
+                <i class="fas fa-sync-alt fa-spin"></i> Auto-refreshing every 10 seconds
+                | Last updated: <span id="last-update">-</span>
+            </small>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let refreshInterval;
+
+        async function loadInstanceData() {
+            try {
+                // Load instance data
+                const response = await fetch('/api/waha/instances');
+                const data = await response.json();
+                
+                // Update overview
+                $('#total-instances').text(data.total_instances || 0);
+                $('#total-capacity').text(data.total_capacity || 0);
+                $('#active-sessions').text(data.total_sessions || 0);
+                
+                const utilization = data.total_capacity > 0 
+                    ? Math.round((data.total_sessions / data.total_capacity) * 100) 
+                    : 0;
+                $('#utilization').text(utilization + '%');
+                $('#utilization-bar')
+                    .css('width', utilization + '%')
+                    .removeClass('bg-success bg-warning bg-danger')
+                    .addClass(utilization < 70 ? 'bg-success' : utilization < 90 ? 'bg-warning' : 'bg-danger');
+                
+                // Update instances list
+                const instancesList = $('#instances-list');
+                instancesList.empty();
+                
+                if (data.instances) {
+                    data.instances.forEach(instance => {
+                        const isFreeTier = instance.type === 'free_users';
+                        const card = $(`
+                            <div class="instance-card ${isFreeTier ? 'free-instance' : 'paid-instance'}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3">
+                                        <strong>${instance.name}</strong>
+                                        <br><small>${instance.url}</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="badge ${isFreeTier ? 'bg-success' : 'bg-warning'}">
+                                            ${isFreeTier ? 'Free Tier' : 'Paid Pool'}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        Sessions: ${instance.sessions}/${instance.capacity}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: ${instance.utilization}">
+                                                ${instance.utilization}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <span class="badge ${instance.status === 'running' ? 'bg-success' : 'bg-danger'}">
+                                            ${instance.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                        instancesList.append(card);
+                    });
+                }
+                
+                // Update revenue metrics if available
+                if (data.revenue_metrics) {
+                    $('#monthly-revenue').text('$' + (data.revenue_metrics.estimated_monthly_revenue || 0));
+                }
+                
+            } catch (error) {
+                console.error('Failed to load instance data:', error);
+            }
+        }
+
+        async function loadScalingMetrics() {
+            try {
+                const response = await fetch('/api/waha/scaling-metrics');
+                const data = await response.json();
+                
+                if (data.revenue) {
+                    $('#monthly-revenue').text(data.revenue.monthly_revenue);
+                    $('#infra-cost').text(data.revenue.total_infrastructure_cost);
+                    $('#profit-margin').text(data.revenue.profit_margin);
+                }
+                
+                if (data.scaling_triggers) {
+                    // Update indicators
+                    $('#capacity-indicator').removeClass().addClass('scaling-indicator');
+                    $('#revenue-indicator').removeClass().addClass('scaling-indicator');
+                    $('#scale-indicator').removeClass().addClass('scaling-indicator');
+                    
+                    if (data.scaling_triggers['80%_capacity']) {
+                        $('#capacity-indicator').addClass('scaling-warning');
+                        $('#capacity-status').text('Warning');
+                    } else {
+                        $('#capacity-indicator').addClass('scaling-good');
+                        $('#capacity-status').text('Good');
+                    }
+                    
+                    if (data.scaling_triggers.revenue_threshold) {
+                        $('#revenue-indicator').addClass('scaling-good');
+                        $('#revenue-status').text('Met');
+                    } else {
+                        $('#revenue-indicator').addClass('scaling-warning');
+                        $('#revenue-status').text('Not Met');
+                    }
+                    
+                    if (data.scaling_triggers.should_scale_now) {
+                        $('#scale-indicator').addClass('scaling-critical');
+                        $('#scale-status').text('Yes!');
+                    } else {
+                        $('#scale-indicator').addClass('scaling-good');
+                        $('#scale-status').text('No');
+                    }
+                }
+                
+                // Update recommendations
+                if (data.recommendations) {
+                    const recDiv = $('#recommendations');
+                    recDiv.empty();
+                    data.recommendations.forEach(rec => {
+                        recDiv.append(`<div class="recommendation">${rec}</div>`);
+                    });
+                }
+                
+                // Update subscription distribution
+                if (data.subscriptions) {
+                    const subDiv = $('#subscription-dist');
+                    subDiv.empty();
+                    Object.entries(data.subscriptions).forEach(([plan, count]) => {
+                        subDiv.append(`
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>${plan.charAt(0).toUpperCase() + plan.slice(1)}</span>
+                                <strong>${count} users</strong>
+                            </div>
+                        `);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Failed to load scaling metrics:', error);
+            }
+        }
+
+        async function loadFreeSessionStats() {
+            try {
+                const response = await fetch('/api/waha/free-sessions');
+                const data = await response.json();
+                
+                $('#free-active').text(data.active_free_sessions || 0);
+                $('#free-deleted').text(data.sessions_deleted_for_inactivity || 0);
+                
+            } catch (error) {
+                console.error('Failed to load free session stats:', error);
+            }
+        }
+
+        async function triggerCleanup() {
+            try {
+                const response = await fetch('/api/waha/trigger-cleanup', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Cleanup triggered successfully!');
+                    loadFreeSessionStats();
+                }
+            } catch (error) {
+                console.error('Failed to trigger cleanup:', error);
+                alert('Failed to trigger cleanup');
+            }
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            $('#last-update').text(now.toLocaleTimeString());
+        }
+
+        async function refreshDashboard() {
+            await Promise.all([
+                loadInstanceData(),
+                loadScalingMetrics(),
+                loadFreeSessionStats()
+            ]);
+            updateLastUpdate();
+        }
+
+        // Initial load
+        $(document).ready(() => {
+            refreshDashboard();
+            
+            // Auto-refresh every 10 seconds
+            refreshInterval = setInterval(refreshDashboard, 10000);
+        });
+
+        // Clean up on page unload
+        $(window).on('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

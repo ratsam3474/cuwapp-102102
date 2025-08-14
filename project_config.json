@@ -1,0 +1,97 @@
+{
+  "main_port": 10210,
+  "components": {
+    "landing": {
+      "name": "Landing Page",
+      "path": "10210-landing",
+      "internal_port": 5500,
+      "route": "/home",
+      "startup_cmd": "npm run build && npm run dev",
+      "health_check": "https://www.cuwapp.com",
+      "enabled": true
+    },
+    "api": {
+      "name": "Main API",
+      "path": "10210-api",
+      "internal_port": 8000,
+      "route": "/",
+      "startup_cmd": "source venv/bin/activate && python3 start.py",
+      "health_check": "https://app.cuwapp.com/health",
+      "enabled": true
+    },
+    "auth": {
+      "name": "Authentication",
+      "path": "10210-auth",
+      "internal_port": 5502,
+      "route": "/auth",
+      "startup_cmd": "npm run build && npm run dev",
+      "health_check": "https://auth.cuwapp.com",
+      "enabled": true
+    },
+    "blog": {
+      "name": "Blog",
+      "path": "../10210/simple-blog/cuwhapp-openblog",
+      "internal_port": 5503,
+      "route": "/blog",
+      "startup_cmd": "pnpm run dev",
+      "health_check": "http://localhost:5503",
+      "enabled": false
+    },
+    "admin": {
+      "name": "Admin Panel",
+      "path": "10210-admin",
+      "internal_port": 8001,
+      "route": "/admin",
+      "startup_cmd": "./start_admin_local.sh",
+      "health_check": "https://admin.cuwapp.com",
+      "enabled": true
+    },
+    "instance_manager": {
+      "name": "Instance Manager",
+      "path": "10210-api",
+      "internal_port": 8002,
+      "route": "/instances",
+      "startup_cmd": "source venv/bin/activate && python3 waha_session_manager.py",
+      "health_check": "http://localhost:8002/health",
+      "enabled": false
+    },
+    "waha_autoscaler": {
+      "name": "WAHA Autoscaler",
+      "path": "10210-api",
+      "internal_port": null,
+      "route": null,
+      "startup_cmd": "source venv/bin/activate && python3 -c \"from waha_pool_manager import waha_pool; import time; print('WAHA Pool Manager initialized'); while True: time.sleep(30)\"",
+      "health_check": null,
+      "enabled": false
+    }
+  },
+  "docker": {
+    "username": "devlikeapro",
+    "token": "YOUR_DOCKER_TOKEN_HERE",
+    "waha_image": "devlikeapro/waha-plus:latest",
+    "waha_ports_start": 3000,
+    "waha_ports_end": 3100,
+    "waha_free_port": 4500,
+    "waha_paid_ports_start": 4501,
+    "waha_paid_ports_end": 4600
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "whatsapp_agent",
+    "user": "postgres",
+    "password": ""
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379
+  },
+  "required_env_vars": [
+    "GROQ_API_KEY",
+    "STRIPE_API_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "CRYPTOMUS_API_KEY",
+    "CRYPTOMUS_MERCHANT_ID",
+    "JWT_SECRET_KEY"
+  ]
+}

@@ -1,0 +1,1 @@
+// Backup of original app.js before fixes

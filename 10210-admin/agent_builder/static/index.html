@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Agent Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .trigger-checkbox {
+            display: none;
+        }
+        .trigger-label {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .trigger-checkbox:checked + .trigger-label {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .loader {
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fab fa-whatsapp text-3xl"></i>
+                    <h1 class="text-2xl font-bold">WhatsApp Agent Builder</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm opacity-75">WAHA Connected</span>
+                    <div class="w-3 h-3 bg-green-400 rounded-full status-indicator"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-6">
+            <nav class="flex space-x-8">
+                <button class="tab-btn py-4 px-2 font-medium tab-active" data-tab="agents">
+                    <i class="fas fa-robot mr-2"></i>Agents
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium hover:text-gray-700" data-tab="create">
+                    <i class="fas fa-plus-circle mr-2"></i>Create Agent
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium hover:text-gray-700" data-tab="tools">
+                    <i class="fas fa-tools mr-2"></i>Tools
+                </button>
+                <button class="tab-btn py-4 px-2 font-medium hover:text-gray-700" data-tab="logs">
+                    <i class="fas fa-file-alt mr-2"></i>Logs
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Agents Tab -->
+        <div id="agents-tab" class="tab-content">
+            <div class="mb-6 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800">Your Agents</h2>
+                <button onclick="refreshAgents()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+            
+            <div id="agents-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Agent cards will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Create Agent Tab -->
+        <div id="create-tab" class="tab-content hidden">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Create New Agent</h2>
+                
+                <form id="create-agent-form" class="bg-white rounded-xl shadow-lg p-8">
+                    <!-- Basic Information -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-info-circle mr-2"></i>Basic Information
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
+                                <input type="text" name="name" required 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="My Awesome Agent">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">WhatsApp Session</label>
+                                <select name="whatsapp_session" id="whatsapp-session-select"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <option value="">Loading sessions...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea name="description" rows="3" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                placeholder="Describe what your agent does..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Model Configuration -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-brain mr-2"></i>Model Configuration
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Model</label>
+                                <select name="model" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Advanced)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
+                                <input type="range" name="temperature" min="0" max="1" step="0.1" value="0.7" 
+                                    class="w-full" oninput="updateTemperatureValue(this)">
+                                <span id="temperature-value" class="text-sm text-gray-600">0.7</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Triggers -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-bolt mr-2"></i>WhatsApp Triggers
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4">Select which WhatsApp events will trigger this agent</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="triggers-grid">
+                            <!-- Triggers will be dynamically inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Tools -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-toolbox mr-2"></i>Available Tools
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <!-- WAHA Tools -->
+                            <div>
+                                <h4 class="font-medium text-gray-700 mb-2">WhatsApp Tools</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="waha-tools-grid">
+                                    <!-- WAHA tools will be dynamically inserted here -->
+                                </div>
+                            </div>
+
+                            <!-- Built-in Tools -->
+                            <div>
+                                <h4 class="font-medium text-gray-700 mb-2">Built-in Tools</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="builtin-tools-grid">
+                                    <!-- Built-in tools will be dynamically inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                            <i class="fas fa-file-alt mr-2"></i>Agent Instructions
+                        </h3>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Root Agent Instructions</label>
+                            <textarea name="root_instruction" rows="4" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                                placeholder="You are a helpful WhatsApp assistant..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-8 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition transform hover:scale-105">
+                            <i class="fas fa-rocket mr-2"></i>Create Agent
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div id="tools-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Available Tools</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">WhatsApp Tools</h3>
+                    <div id="tools-waha-list" class="space-y-3">
+                        <!-- WAHA tools will be listed here -->
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Built-in Tools</h3>
+                    <div id="tools-builtin-list" class="space-y-3">
+                        <!-- Built-in tools will be listed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Agent Logs</h2>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="mb-4">
+                    <select id="log-agent-select" class="px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Select an agent...</option>
+                    </select>
+                    <button onclick="fetchLogs()" class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                        <i class="fas fa-download mr-2"></i>Fetch Logs
+                    </button>
+                </div>
+                
+                <div id="log-viewer" class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm h-96 overflow-auto">
+                    <p class="text-gray-500">Select an agent to view logs...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Agent Details Modal -->
+    <div id="agent-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 id="modal-agent-name" class="text-2xl font-bold text-gray-800"></h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div id="modal-content">
+                    <!-- Modal content will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

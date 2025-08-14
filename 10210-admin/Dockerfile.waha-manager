@@ -1,0 +1,54 @@
+# WAHA Instance Manager Container
+FROM docker:24-dind
+
+# Install Python and dependencies
+RUN apk add --no-cache \
+    python3 \
+    python3-dev \
+    py3-pip \
+    curl \
+    jq \
+    bash
+
+# Install Python dependencies
+COPY requirements-waha.txt /app/requirements-waha.txt
+RUN pip3 install -r /app/requirements-waha.txt
+
+# Copy WAHA manager code
+COPY warmer/waha_instance_manager.py /app/waha_instance_manager.py
+COPY warmer/waha_orchestrator.py /app/waha_orchestrator.py
+COPY database/ /app/database/
+
+# Create startup script
+RUN cat > /app/start-waha-manager.sh << 'EOF'
+#!/bin/bash
+
+# Start Docker daemon
+dockerd-entrypoint.sh dockerd &
+
+# Wait for Docker to be ready
+sleep 10
+
+# Login to Docker registry for WAHA Plus
+echo "Logging into Docker registry for WAHA Plus..."
+docker login -u ${WAHA_DOCKER_USERNAME:-devlikeapro} -p ${WAHA_DOCKER_PASSWORD:-dckr_pat_lb7Gap196dAp_fBn_5MxsOhvRWg}
+
+# Pre-pull WAHA Plus image
+echo "Pre-pulling WAHA Plus image..."
+docker pull devlikeapro/waha-plus:latest
+
+# Logout for security
+docker logout
+
+# Start WAHA orchestrator
+python3 /app/waha_orchestrator.py
+
+EOF
+
+RUN chmod +x /app/start-waha-manager.sh
+
+# Expose port range for WAHA instances
+EXPOSE 4500-9000
+
+WORKDIR /app
+CMD ["/app/start-waha-manager.sh"]

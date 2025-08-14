@@ -1,0 +1,15 @@
+{
+  "/api/protected/route": "/api/protected",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/auth-callback/page": "/auth-callback",
+  "/logout/page": "/logout",
+  "/reset-password/page": "/reset-password",
+  "/page": "/",
+  "/sign-in-magic/page": "/sign-in-magic",
+  "/sign-in/[[...sign-in]]/page": "/sign-in/[[...sign-in]]",
+  "/sign-up/[[...sign-up]]/page": "/sign-up/[[...sign-up]]",
+  "/user-profile/[[...user-profile]]/page": "/user-profile/[[...user-profile]]",
+  "/sync-session/page": "/sync-session",
+  "/dashboard/page": "/dashboard"
+}

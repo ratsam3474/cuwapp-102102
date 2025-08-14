@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Payment API - CuWhapp</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #0f0;
+        }
+        .container {
+            background: #000;
+            border: 1px solid #0f0;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        h1 {
+            color: #0f0;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px dashed #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #0f0;
+            color: #0f0;
+        }
+        .error {
+            border-color: #f00;
+            color: #f00;
+        }
+        input {
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 8px;
+            margin: 5px;
+            font-family: monospace;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Payment API Test Console</h1>
+        
+        <div class="test-section">
+            <h3>Test Parameters</h3>
+            <div>
+                <label>User ID: </label>
+                <input type="text" id="userId" value="user_314ALlsQJESTbb5RrxpuzSEU2d4">
+            </div>
+            <div>
+                <label>Email: </label>
+                <input type="text" id="email" value="ratsammypat@gmail.com">
+            </div>
+            <div>
+                <label>Plan: </label>
+                <select id="plan" style="background: #111; color: #0f0; border: 1px solid #0f0; padding: 8px; margin: 5px;">
+                    <option value="starter">Starter ($7)</option>
+                    <option value="hobby">Hobby ($20)</option>
+                    <option value="pro" selected>Pro ($45)</option>
+                    <option value="premium">Premium ($99)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>1. Test API Endpoint</h3>
+            <button onclick="testAPI()">Test /api/payments/create-payment-intent</button>
+            <div id="api-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Test Hyperswitch SDK Load</h3>
+            <button onclick="testSDK()">Test SDK Loading</button>
+            <div id="sdk-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Test Full Integration</h3>
+            <button onclick="testFullIntegration()">Test Complete Flow</button>
+            <div id="full-result" class="result"></div>
+            <div id="payment-widget" style="margin-top: 20px; min-height: 200px;"></div>
+        </div>
+    </div>
+    
+    <script src="https://beta.hyperswitch.io/v1/HyperLoader.js"></script>
+    
+    <script>
+        const planAmounts = {
+            starter: 700,
+            hobby: 2000,
+            pro: 4500,
+            premium: 9900
+        };
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing API endpoint...\n';
+            
+            try {
+                const userId = document.getElementById('userId').value;
+                const email = document.getElementById('email').value;
+                const plan = document.getElementById('plan').value;
+                
+                const payload = {
+                    plan_id: plan,
+                    amount: planAmounts[plan],
+                    user_id: userId,
+                    email: email,
+                    currency: 'USD',
+                    return_url: `${window.location.origin}/static/payment-success.html?plan=${plan}`,
+                    cancel_url: window.location.href
+                };
+                
+                resultDiv.textContent += `\nRequest payload:\n${JSON.stringify(payload, null, 2)}\n\n`;
+                
+                const response = await fetch('/api/payments/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                resultDiv.textContent += `Response status: ${response.status} ${response.statusText}\n\n`;
+                
+                const data = await response.json();
+                resultDiv.textContent += `Response data:\n${JSON.stringify(data, null, 2)}\n`;
+                
+                if (data.clientSecret || data.client_secret) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent += '\n✅ SUCCESS: Client secret received!';
+                    window.testClientSecret = data.clientSecret || data.client_secret;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent += '\n❌ ERROR: No client secret in response';
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent += `\n❌ ERROR: ${error.message}\n${error.stack}`;
+            }
+        }
+        
+        function testSDK() {
+            const resultDiv = document.getElementById('sdk-result');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing Hyperswitch SDK...\n';
+            
+            try {
+                if (typeof Hyper === 'undefined') {
+                    throw new Error('Hyper is not defined - SDK not loaded');
+                }
+                
+                resultDiv.textContent += '\n✅ Hyper function found\n';
+                
+                // Try to initialize
+                const publishableKey = 'pk_snd_68a3be601ff24b82a4b163a8b3d046b2';
+                const hyper = Hyper(publishableKey);
+                
+                resultDiv.textContent += '✅ Hyper initialized with publishable key\n';
+                
+                // Check if widgets function exists
+                if (typeof hyper.widgets === 'function') {
+                    resultDiv.textContent += '✅ hyper.widgets function exists\n';
+                } else {
+                    resultDiv.textContent += '❌ hyper.widgets function not found\n';
+                }
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent += '\n✅ SDK loaded and initialized successfully!';
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent += `\n❌ ERROR: ${error.message}`;
+            }
+        }
+        
+        async function testFullIntegration() {
+            const resultDiv = document.getElementById('full-result');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing full integration...\n';
+            
+            try {
+                // Step 1: Create payment intent
+                resultDiv.textContent += '\nStep 1: Creating payment intent...\n';
+                await testAPI();
+                
+                if (!window.testClientSecret) {
+                    throw new Error('Failed to get client secret from API');
+                }
+                
+                // Step 2: Initialize Hyperswitch
+                resultDiv.textContent += '\nStep 2: Initializing Hyperswitch...\n';
+                const publishableKey = 'pk_snd_68a3be601ff24b82a4b163a8b3d046b2';
+                const hyper = Hyper(publishableKey);
+                
+                // Step 3: Create widgets
+                resultDiv.textContent += 'Step 3: Creating widgets...\n';
+                const widgets = hyper.widgets({
+                    clientSecret: window.testClientSecret,
+                    appearance: {
+                        theme: 'default',
+                        variables: {
+                            colorPrimary: '#667eea'
+                        }
+                    }
+                });
+                
+                // Step 4: Create payment element
+                resultDiv.textContent += 'Step 4: Creating payment element...\n';
+                const paymentElement = widgets.create('payment', {
+                    layout: 'tabs',
+                    wallets: {
+                        walletReturnUrl: window.location.origin + '/static/payment-success.html',
+                        applePay: 'auto',
+                        googlePay: 'auto',
+                        payPal: 'auto'
+                    }
+                });
+                
+                // Step 5: Mount element
+                resultDiv.textContent += 'Step 5: Mounting payment element...\n';
+                const widgetDiv = document.getElementById('payment-widget');
+                widgetDiv.style.border = '1px solid #0f0';
+                widgetDiv.style.padding = '20px';
+                widgetDiv.style.background = '#111';
+                
+                await paymentElement.mount('#payment-widget');
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent += '\n✅ SUCCESS: Payment widget mounted! Check below.';
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent += `\n❌ ERROR: ${error.message}\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

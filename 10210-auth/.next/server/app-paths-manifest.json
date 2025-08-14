@@ -1,0 +1,15 @@
+{
+  "/api/protected/route": "app/api/protected/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/auth-callback/page": "app/auth-callback/page.js",
+  "/logout/page": "app/logout/page.js",
+  "/reset-password/page": "app/reset-password/page.js",
+  "/page": "app/page.js",
+  "/sign-in-magic/page": "app/sign-in-magic/page.js",
+  "/sign-in/[[...sign-in]]/page": "app/sign-in/[[...sign-in]]/page.js",
+  "/sign-up/[[...sign-up]]/page": "app/sign-up/[[...sign-up]]/page.js",
+  "/user-profile/[[...user-profile]]/page": "app/user-profile/[[...user-profile]]/page.js",
+  "/sync-session/page": "app/sync-session/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}

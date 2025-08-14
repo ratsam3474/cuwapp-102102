@@ -1,0 +1,32 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "api"
+dockerfile = "Dockerfile"
+startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+internalPort = 8000
+
+[[services]]
+name = "admin"
+dockerfile = "Dockerfile.admin"
+startCommand = "python admin_dashboard.py"
+healthcheckPath = "/health"
+internalPort = 8001
+
+[[services]]
+name = "waha"
+image = "devlikeapro/waha-plus:latest"
+internalPort = 3000
+volumes = [
+  { mount = "/app/sessions", name = "waha-sessions" },
+  { mount = "/app/files", name = "waha-files" }
+]

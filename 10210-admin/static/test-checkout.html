@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Checkout Flow</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Checkout Flow</h1>
+    
+    <div class="test-card">
+        <h2>Step 1: Set Test User</h2>
+        <p>First, we'll set a test user in the cache system.</p>
+        <button onclick="setTestUser()">Set Test User</button>
+        <div id="user-status"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>Step 2: Test Upgrade Buttons</h2>
+        <p>Click any plan to test the checkout flow:</p>
+        <button onclick="testUpgrade('starter', 7)">Upgrade to Starter ($7)</button>
+        <button onclick="testUpgrade('hobby', 20)">Upgrade to Hobby ($20)</button>
+        <button onclick="testUpgrade('pro', 45)">Upgrade to Pro ($45)</button>
+        <button onclick="testUpgrade('premium', 99)">Upgrade to Premium ($99)</button>
+        <div id="upgrade-status"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>Step 3: Direct Checkout Test</h2>
+        <p>Test direct navigation to checkout page:</p>
+        <button onclick="directCheckout()">Go to Checkout Page</button>
+    </div>
+    
+    <div class="test-card">
+        <h2>Current User Info</h2>
+        <pre id="user-info">Not loaded yet</pre>
+    </div>
+    
+    <script src="/static/js/user-cache.js"></script>
+    <script src="/static/js/checkout.js"></script>
+    
+    <script>
+        // Load current user info
+        function loadUserInfo() {
+            const user = UserCache.getUser();
+            document.getElementById('user-info').textContent = user ? 
+                JSON.stringify(user, null, 2) : 'No user in cache';
+        }
+        
+        // Set test user
+        function setTestUser() {
+            const testUser = {
+                id: 'test_user_123',
+                username: 'testuser',
+                email: 'test@example.com',
+                name: 'Test User'
+            };
+            
+            UserCache.setUser(testUser);
+            document.getElementById('user-status').innerHTML = 
+                '<div class="status success">✅ Test user set successfully!</div>';
+            loadUserInfo();
+        }
+        
+        // Test upgrade function
+        function testUpgrade(planId, price) {
+            console.log(`Testing upgrade to ${planId} plan for $${price}`);
+            const status = document.getElementById('upgrade-status');
+            
+            try {
+                // Call the upgradePlan function from checkout.js
+                upgradePlan(planId, price);
+                status.innerHTML = 
+                    `<div class="status info">Redirecting to checkout for ${planId} plan...</div>`;
+            } catch (error) {
+                status.innerHTML = 
+                    `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Direct checkout navigation
+        function directCheckout() {
+            const user = UserCache.getUser();
+            if (!user) {
+                alert('Please set test user first!');
+                return;
+            }
+            
+            const params = new URLSearchParams({
+                plan: 'starter',
+                amount: 700,
+                email: user.email,
+                user_id: user.id
+            });
+            
+            window.location.href = `/static/checkout.html?${params.toString()}`;
+        }
+        
+        // Load user info on page load
+        window.addEventListener('DOMContentLoaded', loadUserInfo);
+    </script>
+</body>
+</html>

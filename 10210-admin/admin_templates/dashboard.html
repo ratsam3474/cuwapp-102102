@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CuWhapp Admin | Dashboard</title>
+
+  <!-- Google Font: Source Sans Pro -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <!-- Custom styles -->
+  <style>
+    .small-box { position: relative; overflow: hidden; }
+    .small-box .icon { position: absolute; top: -10px; right: 10px; z-index: 0; font-size: 90px; color: rgba(0,0,0,0.15); }
+    .info-box-icon { width: 70px; }
+    .container-status { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; }
+    .container-status.running { background: #28a745; color: white; }
+    .container-status.exited { background: #dc3545; color: white; }
+    .container-status.paused { background: #ffc107; color: black; }
+  </style>
+
+  <!-- Plausible Analytics -->
+  <script defer data-domain="admin.cuwapp.com" src="https://plausible.io/js/script.js"></script>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
+
+  <!-- Navbar -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <!-- Left navbar links -->
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+      </li>
+      <li class="nav-item d-none d-sm-inline-block">
+        <a href="/" class="nav-link">Dashboard</a>
+      </li>
+    </ul>
+
+    <!-- Right navbar links -->
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item">
+        <span class="nav-link">
+          <i class="fas fa-user-shield"></i> {{ admin_email }}
+        </span>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+          <i class="fas fa-expand-arrows-alt"></i>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Sidebar Container -->
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Brand Logo -->
+    <a href="/" class="brand-link">
+      <img src="https://api.dicebear.com/7.x/shapes/svg?seed=cuwhapp" alt="CuWhapp Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+      <span class="brand-text font-weight-light">CuWhapp Admin</span>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Sidebar Menu -->
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+          <li class="nav-item">
+            <a href="#" class="nav-link active" onclick="loadDashboard()">
+              <i class="nav-icon fas fa-tachometer-alt"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="loadUsers()">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Users</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="loadContainers()">
+              <i class="nav-icon fas fa-server"></i>
+              <p>Docker Containers</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="loadAnalytics()">
+              <i class="nav-icon fas fa-chart-bar"></i>
+              <p>Analytics</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="loadRevenue()">
+              <i class="nav-icon fas fa-dollar-sign"></i>
+              <p>Revenue</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="loadWarmerPage()">
+              <i class="nav-icon fas fa-fire"></i>
+              <p>Warmer Analytics</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Content Wrapper -->
+  <div class="content-wrapper">
+    <!-- Content Header -->
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0" id="page-title">Dashboard</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="#">Home</a></li>
+              <li class="breadcrumb-item active" id="page-breadcrumb">Dashboard</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid" id="main-content">
+        <!-- Stats Row -->
+        <div class="row" id="stats-row">
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+              <div class="inner">
+                <h3 id="total-users">0</h3>
+                <p>Total Users</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-users"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-success">
+              <div class="inner">
+                <h3 id="active-users">0</h3>
+                <p>Active Users</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-user-check"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-warning">
+              <div class="inner">
+                <h3 id="total-campaigns">0</h3>
+                <p>Total Campaigns</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-bullhorn"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-danger">
+              <div class="inner">
+                <h3>$<span id="total-revenue">0</span></h3>
+                <p>Monthly Revenue</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-dollar-sign"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WhatsApp Warmer Stats Row -->
+        <div class="row">
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-purple">
+              <div class="inner">
+                <h3><span id="warmer-hours">0</span>h</h3>
+                <p>Total Warmer Hours</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-fire"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-teal">
+              <div class="inner">
+                <h3 id="warmer-sessions">0</h3>
+                <p>Warmer Sessions</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-sync"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-orange">
+              <div class="inner">
+                <h3 id="warmer-active">0</h3>
+                <p>Active Warmers</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-play-circle"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-maroon">
+              <div class="inner">
+                <h3 id="warmer-messages">0</h3>
+                <p>Warmer Messages</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-comment-dots"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Users by Plan</h3>
+              </div>
+              <div class="card-body">
+                <canvas id="users-chart" style="height:250px"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">System Resources</h3>
+              </div>
+              <div class="card-body">
+                <canvas id="resources-chart" style="height:250px"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warmer Analytics -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">WhatsApp Warmer Analytics - Top Users</h3>
+                <div class="card-tools">
+                  <button type="button" class="btn btn-tool" onclick="loadWarmerAnalytics()">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body table-responsive p-0">
+                <table class="table table-hover text-nowrap">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Email</th>
+                      <th>Sessions</th>
+                      <th>Total Hours</th>
+                      <th>Total Minutes</th>
+                      <th>Est. Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody id="warmer-tbody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Recent User Activity</h3>
+              </div>
+              <div class="card-body table-responsive p-0">
+                <table class="table table-hover text-nowrap" id="activity-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Plan</th>
+                      <th>Status</th>
+                      <th>Messages</th>
+                      <th>Campaigns</th>
+                      <th>Last Activity</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-tbody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer class="main-footer">
+    <strong>CuWhapp Admin Dashboard &copy; 2024</strong>
+    <div class="float-right d-none d-sm-inline-block">
+      <b>Version</b> 1.0.0
+    </div>
+  </footer>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap 4 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- AdminLTE App -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+
+<script>
+// Admin token (in production, this should be handled more securely)
+const ADMIN_TOKEN = localStorage.getItem('admin_token') || 'admin_secret_token_2024';
+const API_BASE = '';
+
+// Charts
+let usersChart = null;
+let resourcesChart = null;
+
+// Initialize
+let isFirstLoad = true;
+document.addEventListener('DOMContentLoaded', function() {
+    // Add a small delay to ensure everything is ready
+    setTimeout(() => {
+        loadDashboard();
+        isFirstLoad = false;
+    }, 1000);
+    // Refresh data every 30 seconds
+    setInterval(loadDashboard, 30000);
+});
+
+async function fetchAPI(endpoint, options = {}) {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+            'Authorization': `Bearer ${ADMIN_TOKEN}`,
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+    }
+    
+    return response.json();
+}
+
+async function loadDashboard() {
+    // First restore the dashboard HTML structure
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('page-breadcrumb').textContent = 'Dashboard';
+    
+    // Restore dashboard HTML
+    const content = document.getElementById('main-content');
+    content.innerHTML = `
+        <!-- Stats Row -->
+        <div class="row" id="stats-row">
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+              <div class="inner">
+                <h3 id="total-users">0</h3>
+                <p>Total Users</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-users"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-success">
+              <div class="inner">
+                <h3 id="active-users">0</h3>
+                <p>Active Users</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-user-check"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-warning">
+              <div class="inner">
+                <h3 id="total-campaigns">0</h3>
+                <p>Total Campaigns</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-bullhorn"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-danger">
+              <div class="inner">
+                <h3>$<span id="total-revenue">0</span></h3>
+                <p>Monthly Revenue</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-dollar-sign"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WhatsApp Warmer Stats Row -->
+        <div class="row">
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-purple">
+              <div class="inner">
+                <h3><span id="warmer-hours">0</span>h</h3>
+                <p>Total Warmer Hours</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-fire"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-teal">
+              <div class="inner">
+                <h3 id="warmer-sessions">0</h3>
+                <p>Warmer Sessions</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-sync"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-orange">
+              <div class="inner">
+                <h3 id="warmer-active">0</h3>
+                <p>Active Warmers</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-play-circle"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-6">
+            <div class="small-box bg-maroon">
+              <div class="inner">
+                <h3 id="warmer-messages">0</h3>
+                <p>Warmer Messages</p>
+              </div>
+              <div class="icon">
+                <i class="fas fa-comment-dots"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Users by Plan</h3>
+              </div>
+              <div class="card-body">
+                <canvas id="users-chart" style="height:250px"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">System Resources</h3>
+              </div>
+              <div class="card-body">
+                <canvas id="resources-chart" style="height:250px"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warmer Analytics -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">WhatsApp Warmer Analytics - Top Users</h3>
+                <div class="card-tools">
+                  <button type="button" class="btn btn-tool" onclick="loadWarmerAnalytics()">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body table-responsive p-0">
+                <table class="table table-hover text-nowrap">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Email</th>
+                      <th>Sessions</th>
+                      <th>Total Hours</th>
+                      <th>Total Minutes</th>
+                      <th>Est. Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody id="warmer-tbody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Recent User Activity</h3>
+              </div>
+              <div class="card-body table-responsive p-0">
+                <table class="table table-hover text-nowrap" id="activity-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Plan</th>
+                      <th>Status</th>
+                      <th>Messages</th>
+                      <th>Campaigns</th>
+                      <th>Last Activity</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-tbody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+    `;
+    
+    try {
+        // Load overview stats
+        const stats = await fetchAPI('/api/stats/overview');
+        
+        document.getElementById('total-users').textContent = stats.total_users;
+        document.getElementById('active-users').textContent = stats.active_users;
+        document.getElementById('total-campaigns').textContent = stats.total_campaigns;
+        document.getElementById('total-revenue').textContent = stats.total_revenue;
+        
+        // Update warmer stats
+        document.getElementById('warmer-hours').textContent = Math.round((stats.total_warmer_minutes || 0) / 60);
+        document.getElementById('warmer-sessions').textContent = stats.total_warmer_sessions || 0;
+        document.getElementById('warmer-active').textContent = stats.active_warmer_sessions || 0;
+        
+        // Load warmer analytics
+        await loadWarmerAnalytics();
+        
+        // Load recent users
+        const users = await fetchAPI('/api/users?limit=10');
+        const tbody = document.getElementById('activity-tbody');
+        tbody.innerHTML = '';
+        
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td><span class="badge badge-${getPlanColor(user.plan_type)}">${user.plan_type}</span></td>
+                <td><span class="badge badge-${getStatusColor(user.status)}">${user.status}</span></td>
+                <td>${user.messages_sent}</td>
+                <td>${user.campaigns_count}</td>
+                <td>${user.last_activity ? new Date(user.last_activity).toLocaleDateString() : 'Never'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Update charts
+        updateCharts(stats, users);
+        
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        if (!isFirstLoad) {
+            alert('Failed to load dashboard data');
+        }
+    }
+}
+
+async function loadUsers() {
+    document.getElementById('page-title').textContent = 'Users';
+    document.getElementById('page-breadcrumb').textContent = 'Users';
+    
+    try {
+        const users = await fetchAPI('/api/users');
+        
+        const content = document.getElementById('main-content');
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">All Users</h3>
+                            <div class="card-tools">
+                                <select class="form-control form-control-sm" onchange="filterUsers(this.value)">
+                                    <option value="">All Plans</option>
+                                    <option value="free">Free</option>
+                                    <option value="starter">Starter</option>
+                                    <option value="hobby">Hobby</option>
+                                    <option value="pro">Pro</option>
+                                    <option value="premium">Premium</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body table-responsive p-0">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Plan</th>
+                                        <th>Status</th>
+                                        <th>Sessions</th>
+                                        <th>Messages</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody">
+                                    ${users.map(user => `
+                                        <tr>
+                                            <td>${user.user_id}</td>
+                                            <td>${user.username}</td>
+                                            <td>${user.email}</td>
+                                            <td><span class="badge badge-${getPlanColor(user.plan_type)}">${user.plan_type}</span></td>
+                                            <td><span class="badge badge-${getStatusColor(user.status)}">${user.status}</span></td>
+                                            <td>${user.current_sessions}/${user.max_sessions}</td>
+                                            <td>${user.messages_sent}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user.user_id}')">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-warning" onclick="changePlan('${user.user_id}', '${user.plan_type}')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading users:', error);
+        if (!isFirstLoad) {
+            alert('Failed to load users');
+        }
+    }
+}
+
+async function loadContainers() {
+    document.getElementById('page-title').textContent = 'Docker Containers';
+    document.getElementById('page-breadcrumb').textContent = 'Containers';
+    
+    try {
+        const containers = await fetchAPI('/api/containers');
+        
+        const content = document.getElementById('main-content');
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Docker Containers</h3>
+                            <div class="card-tools">
+                                <button class="btn btn-sm btn-primary" onclick="loadContainers()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body table-responsive p-0">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Container ID</th>
+                                        <th>Name</th>
+                                        <th>User</th>
+                                        <th>Status</th>
+                                        <th>CPU %</th>
+                                        <th>Memory (MB)</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${containers.map(container => `
+                                        <tr>
+                                            <td>${container.container_id}</td>
+                                            <td>${container.name}</td>
+                                            <td>${container.user_id}</td>
+                                            <td><span class="container-status ${container.status}">${container.status}</span></td>
+                                            <td>${container.cpu_usage}%</td>
+                                            <td>${container.memory_usage} MB</td>
+                                            <td>${new Date(container.created_at).toLocaleDateString()}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-warning" onclick="restartContainer('${container.container_id}')">
+                                                    <i class="fas fa-redo"></i> Restart
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading containers:', error);
+        alert('Failed to load containers');
+    }
+}
+
+async function loadAnalytics() {
+    document.getElementById('page-title').textContent = 'Analytics';
+    document.getElementById('page-breadcrumb').textContent = 'Analytics';
+    
+    try {
+        const usage = await fetchAPI('/api/analytics/usage');
+        
+        const content = document.getElementById('main-content');
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-info"><i class="fas fa-database"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Session Usage</span>
+                            <span class="info-box-number">${usage.session_usage.current} / ${usage.session_usage.maximum}</span>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" style="width: ${usage.session_usage.percentage}%"></div>
+                            </div>
+                            <span class="progress-description">${usage.session_usage.percentage}% utilized</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Messages by Plan</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="messages-chart" style="height:300px"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Plausible Analytics Dashboard</h3>
+                        </div>
+                        <div class="card-body">
+                            <iframe plausible-embed 
+                                src="https://plausible.io/share/admin.cuwapp.com?auth=YOUR_SHARE_LINK&embed=true&theme=light" 
+                                style="width: 100%; height: 600px; border: 0;">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Draw messages chart
+        const ctx = document.getElementById('messages-chart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(usage.messages_by_plan),
+                datasets: [{
+                    label: 'Messages Sent',
+                    data: Object.values(usage.messages_by_plan),
+                    backgroundColor: ['#17a2b8', '#ffc107', '#28a745', '#dc3545', '#6c757d']
+                }]
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        alert('Failed to load analytics');
+    }
+}
+
+async function loadRevenue() {
+    document.getElementById('page-title').textContent = 'Revenue';
+    document.getElementById('page-breadcrumb').textContent = 'Revenue';
+    
+    try {
+        const revenue = await fetchAPI('/api/analytics/revenue');
+        
+        const content = document.getElementById('main-content');
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-success"><i class="fas fa-dollar-sign"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Monthly Revenue</span>
+                            <span class="info-box-number">$${revenue.total_revenue}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Active Subscribers</span>
+                            <span class="info-box-number">${revenue.subscriber_count}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Revenue by Plan</h3>
+                        </div>
+                        <div class="card-body">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Plan</th>
+                                        <th>Subscribers</th>
+                                        <th>Price</th>
+                                        <th>Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(revenue.revenue_by_plan).map(([plan, data]) => `
+                                        <tr>
+                                            <td><span class="badge badge-${getPlanColor(plan)}">${plan}</span></td>
+                                            <td>${data.count}</td>
+                                            <td>$${data.price}</td>
+                                            <td>$${data.revenue}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading revenue:', error);
+        alert('Failed to load revenue data');
+    }
+}
+
+function updateCharts(stats, users) {
+    // Count users by plan
+    const planCounts = {};
+    users.forEach(user => {
+        planCounts[user.plan_type] = (planCounts[user.plan_type] || 0) + 1;
+    });
+    
+    // Users chart
+    const usersCtx = document.getElementById('users-chart');
+    if (usersCtx) {
+        if (usersChart) usersChart.destroy();
+        usersChart = new Chart(usersCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(planCounts),
+                datasets: [{
+                    data: Object.values(planCounts),
+                    backgroundColor: ['#17a2b8', '#ffc107', '#28a745', '#dc3545', '#6c757d']
+                }]
+            }
+        });
+    }
+    
+    // Resources chart
+    const resourcesCtx = document.getElementById('resources-chart');
+    if (resourcesCtx) {
+        if (resourcesChart) resourcesChart.destroy();
+        resourcesChart = new Chart(resourcesCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Docker Containers', 'Active Campaigns', 'Messages (k)'],
+                datasets: [{
+                    label: 'Count',
+                    data: [stats.docker_containers, stats.active_campaigns, Math.round(stats.total_messages_sent / 1000)],
+                    backgroundColor: ['#17a2b8', '#28a745', '#ffc107']
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+async function viewUserDetails(userId) {
+    try {
+        const details = await fetchAPI(`/api/users/${userId}`);
+        // Show details in a modal or navigate to details page
+        alert(JSON.stringify(details, null, 2));
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        alert('Failed to load user details');
+    }
+}
+
+async function changePlan(userId, currentPlan) {
+    const newPlan = prompt(`Current plan: ${currentPlan}\nEnter new plan (free, starter, hobby, pro, premium, admin):`);
+    if (newPlan && newPlan !== currentPlan) {
+        try {
+            await fetchAPI(`/api/users/${userId}/update-plan`, {
+                method: 'POST',
+                body: JSON.stringify({ new_plan: newPlan })
+            });
+            alert('Plan updated successfully');
+            loadUsers();
+        } catch (error) {
+            console.error('Error updating plan:', error);
+            alert('Failed to update plan');
+        }
+    }
+}
+
+async function restartContainer(containerId) {
+    if (confirm('Are you sure you want to restart this container?')) {
+        try {
+            await fetchAPI(`/api/containers/${containerId}/restart`, {
+                method: 'POST'
+            });
+            alert('Container restarted successfully');
+            loadContainers();
+        } catch (error) {
+            console.error('Error restarting container:', error);
+            alert('Failed to restart container');
+        }
+    }
+}
+
+async function filterUsers(plan) {
+    const endpoint = plan ? `/api/users?plan_filter=${plan}` : '/api/users';
+    try {
+        const users = await fetchAPI(endpoint);
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td>${user.user_id}</td>
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td><span class="badge badge-${getPlanColor(user.plan_type)}">${user.plan_type}</span></td>
+                <td><span class="badge badge-${getStatusColor(user.status)}">${user.status}</span></td>
+                <td>${user.current_sessions}/${user.max_sessions}</td>
+                <td>${user.messages_sent}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="viewUserDetails('${user.user_id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="changePlan('${user.user_id}', '${user.plan_type}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error filtering users:', error);
+    }
+}
+
+async function loadWarmerAnalytics() {
+    try {
+        const warmerData = await fetchAPI('/api/analytics/warmer');
+        
+        // Update warmer messages count
+        document.getElementById('warmer-messages').textContent = warmerData.overview.total_messages || 0;
+        
+        // Update warmer table
+        const tbody = document.getElementById('warmer-tbody');
+        tbody.innerHTML = '';
+        
+        if (warmerData.top_users && warmerData.top_users.length > 0) {
+            warmerData.top_users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.user_id.substring(0, 20)}...</td>
+                    <td>${user.email}</td>
+                    <td>${user.session_count}</td>
+                    <td>${user.total_hours}h</td>
+                    <td>${user.total_minutes}m</td>
+                    <td>$${user.cost}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No warmer usage yet</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading warmer analytics:', error);
+    }
+}
+
+async function loadWarmerPage() {
+    document.getElementById('page-title').textContent = 'WhatsApp Warmer Analytics';
+    document.getElementById('page-breadcrumb').textContent = 'Warmer Analytics';
+    
+    try {
+        const warmerData = await fetchAPI('/api/analytics/warmer');
+        const usageData = await fetchAPI('/api/analytics/usage');
+        
+        const content = document.getElementById('main-content');
+        content.innerHTML = `
+            <!-- Warmer Overview Cards -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-purple"><i class="fas fa-fire"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total Hours</span>
+                            <span class="info-box-number">${warmerData.overview.total_hours}h</span>
+                            <small class="text-muted">${warmerData.overview.total_minutes} minutes</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-teal"><i class="fas fa-sync"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total Sessions</span>
+                            <span class="info-box-number">${warmerData.overview.total_sessions}</span>
+                            <small class="text-muted">${warmerData.overview.active_sessions} active</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-orange"><i class="fas fa-comment-dots"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Messages Sent</span>
+                            <span class="info-box-number">${warmerData.overview.total_messages}</span>
+                            <small class="text-muted">Via warmer</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box">
+                        <span class="info-box-icon bg-maroon"><i class="fas fa-users"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Groups Created</span>
+                            <span class="info-box-number">${warmerData.overview.total_groups}</span>
+                            <small class="text-muted">For warming</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage by Plan -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Warmer Usage by Plan</h3>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Plan</th>
+                                        <th>Sessions</th>
+                                        <th>Total Minutes</th>
+                                        <th>Total Hours</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${warmerData.by_plan.map(plan => `
+                                        <tr>
+                                            <td><span class="badge badge-${getPlanColor(plan.plan)}">${plan.plan}</span></td>
+                                            <td>${plan.sessions}</td>
+                                            <td>${plan.total_minutes}m</td>
+                                            <td>${Math.round(plan.total_minutes / 60)}h</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Cost Analysis</h3>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-6">Total Minutes Used:</dt>
+                                <dd class="col-sm-6">${warmerData.overview.total_minutes} minutes</dd>
+                                
+                                <dt class="col-sm-6">Rate per Minute:</dt>
+                                <dd class="col-sm-6">$0.001</dd>
+                                
+                                <dt class="col-sm-6">Estimated Total Cost:</dt>
+                                <dd class="col-sm-6"><strong>$${warmerData.overview.estimated_cost}</strong></dd>
+                                
+                                <dt class="col-sm-6">Average per Session:</dt>
+                                <dd class="col-sm-6">$${(warmerData.overview.estimated_cost / warmerData.overview.total_sessions).toFixed(3)}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Users Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Top Warmer Users</h3>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Email</th>
+                                        <th>Sessions</th>
+                                        <th>Total Hours</th>
+                                        <th>Total Minutes</th>
+                                        <th>Messages Sent</th>
+                                        <th>Estimated Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${warmerData.top_users.map(user => `
+                                        <tr>
+                                            <td><small>${user.user_id}</small></td>
+                                            <td>${user.email}</td>
+                                            <td>${user.session_count}</td>
+                                            <td>${user.total_hours}h</td>
+                                            <td>${user.total_minutes}m</td>
+                                            <td>-</td>
+                                            <td><strong>$${user.cost}</strong></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading warmer page:', error);
+        document.getElementById('main-content').innerHTML = '<div class="alert alert-danger">Failed to load warmer analytics</div>';
+    }
+}
+
+function getPlanColor(plan) {
+    const colors = {
+        'free': 'secondary',
+        'starter': 'info',
+        'hobby': 'warning',
+        'pro': 'success',
+        'premium': 'danger',
+        'admin': 'dark'
+    };
+    return colors[plan] || 'secondary';
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'active': 'success',
+        'trial': 'warning',
+        'grace_period': 'danger',
+        'cancelled': 'secondary'
+    };
+    return colors[status] || 'secondary';
+}
+
+async function logout() {
+    try {
+        const response = await fetch('/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = '/login';
+    }
+}
+</script>
+</body>
+</html>
