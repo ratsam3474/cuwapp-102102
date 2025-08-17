@@ -19,14 +19,15 @@ class CuWhappEmailService:
     def __init__(self, smtp_host: str = "smtp.gmail.com", smtp_port: int = 587,
                  sender_email: str = None, sender_password: str = None):
         """Initialize email service"""
+        import os
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
-        self.sender_email = sender_email or "notifications@cuwapp.com"
+        self.sender_email = sender_email or os.getenv('NOTIFICATION_EMAIL', 'notifications@cuwapp.com')
         self.sender_password = sender_password
         self.sender_name = "CuWhapp Team"
+        self.api_url = os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')
         
         # Storage path for email lists
-        import os
         base_path = os.getenv("DATA_PATH", "data")
         self.storage_path = Path(base_path) / "email"
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -66,7 +67,7 @@ class CuWhappEmailService:
                             <p style="color: #666;">unprocessed contacts ready to engage</p>
                             
                             <center>
-                                <a href="https://app.cuwapp.com" class="cta-button">
+                                <a href="{self.api_url}" class="cta-button">
                                     🚀 Process Them Now
                                 </a>
                             </center>
@@ -198,7 +199,7 @@ class CuWhappEmailService:
                         
                         <p>Meanwhile, explore our current features:</p>
                         <p style="text-align: center;">
-                            <a href="https://app.cuwapp.com" style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
+                            <a href="{self.api_url}" style="display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
                                 Go to Dashboard
                             </a>
                         </p>

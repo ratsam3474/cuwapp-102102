@@ -5,11 +5,12 @@ Dashboard then makes direct calls to user containers
 """
 
 from fastapi import FastAPI, Request, HTTPException, Header
-from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
+from fastapi.responses import RedirectResponse, JSONResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import logging
 import os
+import json
 from typing import Optional
 from datetime import datetime
 
@@ -25,16 +26,31 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# CORS configuration
+# CORS configuration from environment
+CORS_ORIGINS = []
+
+# Add production origins from environment
+if os.getenv('ENV', 'development') == 'production':
+    CORS_ORIGINS.extend([
+        os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com'),
+        os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com'),
+        os.getenv('LANDING_PAGE_URL', 'https://cuwapp.com'),
+        os.getenv('ADMIN_SERVICE_URL', 'https://admin.cuwapp.com'),
+        "https://dashboard.cuwapp.com",  # Legacy support
+    ])
+else:
+    # Development origins
+    CORS_ORIGINS.extend([
+        "http://localhost:3000",
+        "http://localhost:5500",
+        "http://localhost:5502",
+        "http://localhost:8000",
+        "http://localhost:8005",
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://app.cuwapp.com",
-        "https://dashboard.cuwapp.com", 
-        "https://auth.cuwapp.com",
-        "http://localhost:3000",
-        "http://localhost:8000"
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,13 +78,15 @@ async def root(request: Request):
             return FileResponse(gateway_html)
         else:
             # Fallback redirect to auth
-            return RedirectResponse(url="https://auth.cuwapp.com")
+            auth_url = os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com')
+            return RedirectResponse(url=auth_url)
     
     try:
         # Validate token
         validation = session_manager.validate_session(token)
         if not validation["valid"]:
-            return RedirectResponse(url="https://auth.cuwapp.com")
+            auth_url = os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com')
+            return RedirectResponse(url=auth_url)
         
         # Get user from token
         user_id = validation["user_id"]
@@ -183,7 +201,8 @@ async def root(request: Request):
         
     except Exception as e:
         logger.error(f"Error in gateway root: {e}")
-        return RedirectResponse(url="https://auth.cuwapp.com?error=gateway_error")
+        auth_url = os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com')
+        return RedirectResponse(url=f"{auth_url}?error=gateway_error")
 
 @app.post("/api/gateway/refresh-infrastructure")
 async def refresh_infrastructure(authorization: Optional[str] = Header(None)):
@@ -204,7 +223,7 @@ async def refresh_infrastructure(authorization: Optional[str] = Header(None)):
                 status_code=401,
                 content={
                     "valid": False,
-                    "redirect": "https://auth.cuwapp.com"
+                    "redirect": os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com')
                 }
             )
         

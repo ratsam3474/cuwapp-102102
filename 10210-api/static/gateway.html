@@ -368,6 +368,8 @@
             }
         }
     </style>
+    <!-- Environment Configuration -->
+    <script src="/static/js/env-config.js"></script>
 </head>
 <body>
     <!-- Animated background -->
@@ -467,7 +469,7 @@
                 
                 if (!token || !userId) {
                     showError('Missing authentication credentials. Please login again.');
-                    window.location.href = 'https://auth.cuwapp.com';
+                    window.location.href = window.ENV ? window.ENV.AUTH_SERVICE_URL : 'https://auth.cuwapp.com';
                     return;
                 }
                 

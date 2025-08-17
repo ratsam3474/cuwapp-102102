@@ -94,10 +94,11 @@ print_status "Requirements installed successfully"
 
 # Check if WAHA server is running (optional)
 print_info "Checking WAHA server connection..."
-if curl -s http://34.133.143.67:4500/ping > /dev/null 2>&1; then
-    print_status "WAHA server is running"
+WAHA_VM_IP=${WAHA_VM_EXTERNAL_IP:-34.133.143.67}
+if curl -s http://${WAHA_VM_IP}:4500/ping > /dev/null 2>&1; then
+    print_status "WAHA server is running at ${WAHA_VM_IP}:4500"
 else
-    print_warning "WAHA server not detected on localhost:4500"
+    print_warning "WAHA server not detected at ${WAHA_VM_IP}:4500"
     print_info "Make sure WAHA server is running before creating sessions"
     echo ""
     read -p "Continue anyway? (y/N): " -n 1 -r
@@ -109,9 +110,12 @@ else
 fi
 
 echo ""
+# Get dashboard URL from environment
+DASHBOARD_URL=${API_GATEWAY_URL:-https://app.cuwapp.com}
+
 echo -e "${GREEN}======================================================"
 echo "      WhatsApp Agent is starting..."
-echo "      Dashboard will open at: https://app.cuwapp.com"
+echo "      Dashboard will open at: ${DASHBOARD_URL}"
 echo "      Press Ctrl+C to stop the server"
 echo -e "======================================================${NC}"
 echo ""

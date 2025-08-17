@@ -19,12 +19,14 @@ class DynamicURLManager:
     """Manages user container provisioning and URL allocation via DO Functions"""
     
     def __init__(self):
-        # Base configuration
+        # Base configuration from environment
         self.base_url = os.getenv('BASE_URL', 'http://localhost')
-        self.server_ip = os.getenv('SERVER_IP', '174.138.55.42')
+        self.server_ip = os.getenv('NEW_SERVER_IP', '34.173.85.56')
+        self.user_vm_ip = os.getenv('USER_VM_EXTERNAL_IP', '34.173.85.56')
         
-        # DigitalOcean Function URL for container management
-        self.do_container_function_url = os.getenv('DO_CONTAINER_FUNCTION_URL')
+        # Container Manager URL (Google Cloud Run)
+        self.do_container_function_url = os.getenv('CONTAINER_MANAGER_URL', 
+                                                   'https://container-manager-337193391523.us-central1.run.app')
         
         # Port ranges for services (aiming for 100,000 users)
         self.app_port_start = 40000

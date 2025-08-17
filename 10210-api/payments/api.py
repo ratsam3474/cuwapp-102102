@@ -68,7 +68,7 @@ async def test_coinbase_connection():
             "customer_id": "crypto_test_customer",
             "email": "crypto@test.com",
             "description": "Crypto Connection Test",
-            "return_url": "https://app.cuwapp.com/success",
+            "return_url": f"{os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')}/success",
             "profile_id": PaymentConfig.HYPERSWITCH_PROFILE_ID,
             "payment_method": "crypto",
             "payment_method_type": "crypto_currency",
@@ -135,7 +135,7 @@ async def test_hyperswitch_connection():
             "customer_id": "test_customer",
             "email": "test@example.com",
             "description": "Connection Test",
-            "return_url": "https://app.cuwapp.com/success",
+            "return_url": f"{os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')}/success",
             "profile_id": PaymentConfig.HYPERSWITCH_PROFILE_ID
         }
         
@@ -359,7 +359,8 @@ async def create_checkout(request: CreateCheckoutRequest):
         query_string = urlencode(checkout_params)
         
         # Return checkout page URL
-        checkout_url = f"https://app.cuwapp.com/static/checkout.html?{query_string}"
+        base_url = os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')
+        checkout_url = f"{base_url}/static/checkout.html?{query_string}"
         
         return {
             "success": True,
@@ -555,8 +556,8 @@ async def create_coingate_payment(request: CryptoPaymentRequest):
             crypto_currency=request.crypto_currency,
             order_id=order_id,
             customer_email=request.customer_email,
-            success_url=f"{os.getenv('BASE_URL', 'https://app.cuwapp.com')}/payment-success?provider=coingate",
-            cancel_url=f"{os.getenv('BASE_URL', 'https://app.cuwapp.com')}/payment-cancelled?provider=coingate"
+            success_url=f"{os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')}/payment-success?provider=coingate",
+            cancel_url=f"{os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')}/payment-cancelled?provider=coingate"
         )
         
         return {
@@ -582,7 +583,7 @@ async def create_bitpay_payment(request: CryptoPaymentRequest):
             currency=request.currency,
             order_id=order_id,
             customer_email=request.customer_email,
-            redirect_url=f"{os.getenv('BASE_URL', 'https://app.cuwapp.com')}/payment-success?provider=bitpay"
+            redirect_url=f"{os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')}/payment-success?provider=bitpay"
         )
         
         return {

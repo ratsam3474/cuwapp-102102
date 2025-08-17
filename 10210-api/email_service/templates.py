@@ -6,14 +6,16 @@ Professional HTML email templates with customization
 from typing import Dict, List, Optional
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 
 class EmailTemplateManager:
     def __init__(self):
-        import os
         base_path = os.getenv("APP_PATH", ".")
         self.templates_dir = Path(base_path) / "email_service" / "templates"
         self.templates_dir.mkdir(parents=True, exist_ok=True)
+        self.api_url = os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com')
+        self.support_email = os.getenv('SUPPORT_EMAIL', 'support@cuwapp.com')
         self.load_templates()
     
     def load_templates(self):
@@ -100,7 +102,7 @@ class EmailTemplateManager:
                                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0;">
                                         <tr>
                                             <td align="center">
-                                                <a href="https://app.cuwapp.com" class="cta-button" style="display: inline-block; padding: 15px 40px; background-color: #1a4d2e; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 16px;">
+                                                <a href="{self.api_url}" class="cta-button" style="display: inline-block; padding: 15px 40px; background-color: #1a4d2e; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 16px;">
                                                     Go to Dashboard
                                                 </a>
                                             </td>
@@ -137,7 +139,7 @@ class EmailTemplateManager:
                                                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                                                     <tr>
                                                         <td style="padding: 0 10px;">
-                                                            <a href="mailto:support@cuwapp.com" style="color: #1a4d2e; text-decoration: none; font-size: 14px;">
+                                                            <a href="mailto:{self.support_email}" style="color: #1a4d2e; text-decoration: none; font-size: 14px;">
                                                                 📧 Email Support
                                                             </a>
                                                         </td>
@@ -256,7 +258,7 @@ class EmailTemplateManager:
                                     
                                     <!-- Premium CTA -->
                                     <div style="text-align: center; margin: 40px 0;">
-                                        <a href="https://app.cuwapp.com" style="display: inline-block; padding: 18px 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);">
+                                        <a href="{self.api_url}" style="display: inline-block; padding: 18px 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);">
                                             Access Premium Dashboard
                                         </a>
                                     </div>
@@ -300,7 +302,7 @@ class EmailTemplateManager:
                                     <p style="font-size: 16px; line-height: 1.6; color: #666666; margin: 0 0 30px 0;">
                                         Your account is ready. Start sending WhatsApp campaigns and engaging with your customers at scale.
                                     </p>
-                                    <a href="https://app.cuwapp.com" style="display: inline-block; padding: 12px 32px; background-color: #1a4d2e; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: 500;">
+                                    <a href="{self.api_url}" style="display: inline-block; padding: 12px 32px; background-color: #1a4d2e; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: 500;">
                                         Open Dashboard
                                     </a>
                                     <p style="font-size: 14px; color: #999999; margin: 40px 0 0 0;">

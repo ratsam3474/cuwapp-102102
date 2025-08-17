@@ -11,8 +11,9 @@ class Config:
     
     # ==================== WAHA SERVER SETTINGS ====================
     
-    # WAHA server base URL
-    WAHA_BASE_URL: str = os.getenv("WAHA_BASE_URL", "http://localhost:4500")
+    # WAHA server base URL from environment
+    WAHA_VM_IP = os.getenv('WAHA_VM_EXTERNAL_IP', '34.133.143.67')
+    WAHA_BASE_URL: str = os.getenv("WAHA_BASE_URL", f"http://{WAHA_VM_IP}:4500" if os.getenv('ENV') == 'production' else "http://localhost:4500")
     
     # WAHA API key (if authentication is enabled)
     WAHA_API_KEY: Optional[str] = os.getenv("WAHA_API_KEY", None)
@@ -59,8 +60,16 @@ class Config:
     # Enable CORS (Cross-Origin Resource Sharing)
     ENABLE_CORS: bool = os.getenv("ENABLE_CORS", "True").lower() == "true"
     
-    # Allowed origins for CORS (use ["*"] for all origins in development)
-    CORS_ORIGINS: list = ["*"] if DEBUG else ["https://app.cuwapp.com"]
+    # Allowed origins for CORS from environment
+    if os.getenv('ENV', 'development') == 'production':
+        CORS_ORIGINS: list = [
+            os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com'),
+            os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com'),
+            os.getenv('LANDING_PAGE_URL', 'https://cuwapp.com'),
+            os.getenv('ADMIN_SERVICE_URL', 'https://admin.cuwapp.com'),
+        ]
+    else:
+        CORS_ORIGINS: list = ["*"]
     
     # Enable API key authentication (for your own API endpoints)
     ENABLE_AUTH: bool = os.getenv("ENABLE_AUTH", "False").lower() == "true"
@@ -206,7 +215,12 @@ class ProductionConfig(Config):
     DEBUG = False
     LOG_LEVEL = "INFO"
     ENABLE_CORS = True
-    CORS_ORIGINS = ["https://yourdomain.com"]  # Update with your domain
+    CORS_ORIGINS = [
+        os.getenv('API_GATEWAY_URL', 'https://app.cuwapp.com'),
+        os.getenv('AUTH_SERVICE_URL', 'https://auth.cuwapp.com'),
+        os.getenv('LANDING_PAGE_URL', 'https://cuwapp.com'),
+        os.getenv('ADMIN_SERVICE_URL', 'https://admin.cuwapp.com'),
+    ]
     ENABLE_AUTH = True
     ENABLE_RATE_LIMITING = True
 
@@ -214,7 +228,7 @@ class TestingConfig(Config):
     """Testing environment configuration"""
     DEBUG = True
     LOG_LEVEL = "DEBUG"
-    WAHA_BASE_URL = "http://localhost:4500"  # Test WAHA instance
+    WAHA_BASE_URL = os.getenv("WAHA_BASE_URL", "http://localhost:4500")  # Test WAHA instance
 
 # Get configuration based on environment
 def get_config() -> Config:

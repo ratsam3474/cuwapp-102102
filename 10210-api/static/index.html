@@ -14,12 +14,15 @@
     
     <!-- Custom CSS -->
     <link href="/static/css/style.css" rel="stylesheet">
+    
+    <!-- Environment Configuration (Must load before other scripts) -->
+    <script src="/static/js/env-config.js"></script>
 </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="https://cuwapp.com" title="Back to Landing Page">
+            <a class="navbar-brand fw-bold" href="#" onclick="window.location.href=window.ENV.LANDING_PAGE_URL; return false;" title="Back to Landing Page">
                 <i class="bi bi-whatsapp me-2"></i>Cuwhapp
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -79,10 +82,10 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><h6 class="dropdown-header">Account Settings</h6></li>
-                            <li><a class="dropdown-item" href="https://auth.cuwapp.com/reset-password">
+                            <li><a class="dropdown-item" href="#" onclick="window.location.href=window.buildAuthUrl('/reset-password'); return false;">
                                 <i class="bi bi-key me-2"></i>Reset Password
                             </a></li>
-                            <li><a class="dropdown-item" href="https://auth.cuwapp.com/user-profile">
+                            <li><a class="dropdown-item" href="#" onclick="window.location.href=window.buildAuthUrl('/user-profile'); return false;">
                                 <i class="bi bi-person me-2"></i>Manage Profile
                             </a></li>
                             <li><hr class="dropdown-divider"></li>

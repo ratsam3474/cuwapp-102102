@@ -12,6 +12,11 @@ function getDynamicUrl(endpoint) {
         baseUrl = sessionStorage.getItem('API_URL') || infrastructure.apiUrl || '';
     }
     
+    // If no dynamic URL, fall back to environment config
+    if (!baseUrl && window.ENV) {
+        baseUrl = window.ENV.API_GATEWAY_URL;
+    }
+    
     // Return full URL if we have baseUrl, otherwise return relative URL
     return baseUrl ? `${baseUrl}${endpoint}` : endpoint;
 }
@@ -2098,7 +2103,7 @@ class WhatsAppAgent {
                 <div class="text-center">
                     <i class="bi bi-person-x-fill text-warning display-4"></i>
                     <p class="mt-2 mb-3">Not logged in</p>
-                    <a href="https://auth.cuwapp.com/sign-in" class="btn btn-sm btn-primary">
+                    <a href="${window.ENV ? window.buildAuthUrl('/sign-in') : 'https://auth.cuwapp.com/sign-in'}" class="btn btn-sm btn-primary">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
                     </a>
                 </div>
@@ -2159,7 +2164,7 @@ class WhatsAppAgent {
     logout() {
         if (confirm('Are you sure you want to logout?')) {
             // Redirect to Clerk logout page which will handle everything
-            window.location.href = 'https://auth.cuwapp.com/logout';
+            window.location.href = window.ENV ? window.buildAuthUrl('/logout') : 'https://auth.cuwapp.com/logout';
         }
     }
     
@@ -5939,7 +5944,7 @@ function openPasswordReset() {
 
 function redirectToPasswordReset() {
     // Redirect to Clerk's password reset page
-    window.location.href = 'https://auth.cuwapp.com/sign-in#/reset-password';
+    window.location.href = window.ENV ? window.buildAuthUrl('/sign-in#/reset-password') : 'https://auth.cuwapp.com/sign-in#/reset-password';
 }
 
 function logout() {
