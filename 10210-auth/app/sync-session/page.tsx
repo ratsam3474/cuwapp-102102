@@ -42,7 +42,7 @@ export default function SyncSession() {
         
         // Sync with backend
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://app.cuwapp.com';
+          const apiUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com';
           const response = await fetch(`${apiUrl}/api/users/sync`, {
             method: 'POST',
             headers: {
@@ -74,7 +74,7 @@ export default function SyncSession() {
         
         // Redirect to dashboard
         setTimeout(() => {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://app.cuwapp.com';
+          const apiUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com';
           window.location.href = apiUrl;
         }, 1500);
         

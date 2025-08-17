@@ -45,16 +45,16 @@ function AuthSuccessContent() {
           token: token || '',
           isNewLogin: 'true'
         });
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://app.cuwapp.com';
+        const apiUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com';
         window.location.href = `${apiUrl}?${dashboardParams.toString()}`;
       } else {
         // Default to landing page home
-        const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'http://174.138.55.42:5500';
+        const landingUrl = process.env.NEXT_PUBLIC_LANDING_PAGE_URL || 'https://cuwapp.com';
         window.location.href = landingUrl;
       }
     } else {
       // No user data, redirect to sign-in
-      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'https://auth.cuwapp.com';
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'https://auth.cuwapp.com';
       window.location.href = `${authUrl}/sign-in`;
     }
   }, [searchParams]);

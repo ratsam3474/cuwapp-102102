@@ -19,7 +19,7 @@ export const BlogSection = () => {
               Expert insights, tutorials, and best practices for WhatsApp marketing success
             </p>
             <a 
-              href="https://cuwapp.com/blog" 
+              href={`${process.env.NEXT_PUBLIC_LANDING_PAGE_URL || 'https://cuwapp.com'}/blog`} 
               className="inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-accent text-white py-3 px-8 rounded-lg font-semibold transition-all transform hover:scale-105"
             >
               Visit Our Blog

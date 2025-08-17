@@ -45,8 +45,8 @@ export const UserStatus = () => {
       localStorage.removeItem('user_subscription');
       
       // Redirect to Clerk logout page with return URL to landing page
-      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'https://auth.cuwapp.com';
-      const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL || 'http://174.138.55.42:5500';
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'https://auth.cuwapp.com';
+      const landingUrl = process.env.NEXT_PUBLIC_LANDING_PAGE_URL || 'https://cuwapp.com';
       window.location.href = `${authUrl}/logout?redirect_url=` + encodeURIComponent(landingUrl);
     }
   };
@@ -55,13 +55,13 @@ export const UserStatus = () => {
     return (
       <div className="flex items-center gap-2">
         <a
-          href={`${process.env.NEXT_PUBLIC_AUTH_URL || 'https://auth.cuwapp.com'}/sign-in`}
+          href={`${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'https://auth.cuwapp.com'}/sign-in`}
           className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-accent transition-colors"
         >
           Sign In
         </a>
         <a
-          href={`${process.env.NEXT_PUBLIC_AUTH_URL || 'https://auth.cuwapp.com'}/sign-up`}
+          href={`${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'https://auth.cuwapp.com'}/sign-up`}
           className="px-4 py-2 bg-white text-black border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Sign Up

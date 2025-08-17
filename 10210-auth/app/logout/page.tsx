@@ -29,11 +29,13 @@ export default function LogoutPage() {
         }
         
         // Sign out from Clerk and redirect
-        await signOut({ redirectUrl: 'https://cuwapp.com' });
+        const landingUrl = process.env.NEXT_PUBLIC_LANDING_PAGE_URL || 'https://cuwapp.com';
+        await signOut({ redirectUrl: landingUrl });
       } catch (error) {
         console.error('Logout error:', error);
         // Fallback redirect
-        window.location.href = 'https://cuwapp.com';
+        const landingUrl = process.env.NEXT_PUBLIC_LANDING_PAGE_URL || 'https://cuwapp.com';
+        window.location.href = landingUrl;
       }
     };
 

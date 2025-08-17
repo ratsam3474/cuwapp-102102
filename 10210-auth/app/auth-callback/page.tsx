@@ -45,11 +45,8 @@ export default function AuthCallback() {
         
         // Create or update user subscription in backend
         try {
-          // Detect environment based on hostname
-          const hostname = window.location.hostname;
-          const apiUrl = (hostname === 'localhost' || hostname === '127.0.0.1') 
-            ? 'https://app.cuwapp.com' 
-            : 'https://app.cuwapp.com';
+          // Use environment variable for API URL
+          const apiUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com';
           const response = await fetch(`${apiUrl}/api/users/sync`, {
             method: 'POST',
             headers: {
@@ -87,11 +84,7 @@ export default function AuthCallback() {
         });
         
         // Go directly to dashboard - it will set its own cache
-        // Detect environment based on hostname
-        const hostname = window.location.hostname;
-        const dashboardUrl = (hostname === 'localhost' || hostname === '127.0.0.1') 
-          ? 'https://app.cuwapp.com' 
-          : 'https://app.cuwapp.com';
+        const dashboardUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com';
         window.location.href = `${dashboardUrl}?${params.toString()}`;
       } else {
         // No user, redirect to sign-in

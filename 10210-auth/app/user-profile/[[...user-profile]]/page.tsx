@@ -45,7 +45,7 @@ export default function UserProfilePage() {
         </div>
         <div className="flex items-center gap-4">
           <Link
-            href={process.env.NEXT_PUBLIC_API_URL || 'http://174.138.55.42:8000'}
+            href={process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'https://app.cuwapp.com'}
             className="flex items-center gap-2 font-medium text-[0.8125rem] rounded-full px-4 py-2 hover:bg-gray-100 border"
           >
             <svg
