@@ -1,4 +1,4 @@
-// File: /root/102102/10210-auth/app/sync-session/page.tsx
+// File: /Users/JE/Documents/102102/production_20250814_1716/10210-auth/app/sync-session/page.tsx
 import * as entry from '../../../../app/sync-session/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

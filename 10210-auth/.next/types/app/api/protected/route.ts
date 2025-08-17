@@ -1,4 +1,4 @@
-// File: /root/102102/10210-auth/app/api/protected/route.ts
+// File: /Users/JE/Documents/102102/production_20250814_1716/10210-auth/app/api/protected/route.ts
 import * as entry from '../../../../../app/api/protected/route.js'
 import type { NextRequest } from 'next/server.js'
 

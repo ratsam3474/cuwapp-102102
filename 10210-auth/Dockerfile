@@ -1,5 +1,4 @@
-# Auth Service Dockerfile
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
@@ -9,14 +8,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production
 
-# Copy application files
+# Copy application
 COPY . .
 
-# Build the application
+# Build Next.js app
 RUN npm run build
 
 # Expose port
 EXPOSE 5502
 
-# Start the application
-CMD ["npm", "run", "start"]
+# Start production server
+CMD ["npm", "start"]
