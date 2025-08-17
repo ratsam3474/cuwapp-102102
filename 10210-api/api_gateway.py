@@ -171,8 +171,8 @@ async def root(request: Request):
                     sessionStorage.setItem('WARMER_URL', config.infrastructure.warmerUrl);
                     sessionStorage.setItem('CAMPAIGN_URL', config.infrastructure.campaignUrl);
                     
-                    // Redirect to dashboard
-                    window.location.href = 'https://dashboard.cuwapp.com';
+                    // Redirect to dashboard on same server
+                    window.location.href = '/static/index.html';
                 </script>
             </head>
             <body>

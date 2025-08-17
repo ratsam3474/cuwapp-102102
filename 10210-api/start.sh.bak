@@ -94,7 +94,7 @@ print_status "Requirements installed successfully"
 
 # Check if WAHA server is running (optional)
 print_info "Checking WAHA server connection..."
-if curl -s http://34.133.143.67:4500/ping > /dev/null 2>&1; then
+if curl -s http://localhost:4500/ping > /dev/null 2>&1; then
     print_status "WAHA server is running"
 else
     print_warning "WAHA server not detected on localhost:4500"
