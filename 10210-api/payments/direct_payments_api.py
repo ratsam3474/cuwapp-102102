@@ -408,13 +408,13 @@ async def upgrade_user_plan(user_id: str, plan_type: str, payment_id: str, payme
             # Record payment
             from database.subscription_models import Payment, PaymentStatus
             payment = Payment(
-                payment_id=payment_id,
+                hyperswitch_payment_id=payment_id,
                 user_id=user_id,
                 amount=amount or 0,
                 currency="USD",
                 status=PaymentStatus.SUCCEEDED,
                 payment_method=payment_method,
-                metadata={"plan": plan_type}
+                payment_metadata={"plan": plan_type}
             )
             db.add(payment)
             
@@ -490,13 +490,13 @@ async def store_pending_payment(payment_id: str, user_id: str, plan_type: str, p
         
         with get_db() as db:
             payment = Payment(
-                payment_id=payment_id,
+                hyperswitch_payment_id=payment_id,
                 user_id=user_id,
                 amount=amount or 0,
                 currency="USD",
                 status=PaymentStatus.PENDING,
                 payment_method=payment_method,
-                metadata={
+                payment_metadata={
                     "plan": plan_type,
                     "pending_upgrade": True
                 }

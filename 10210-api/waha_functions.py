@@ -79,6 +79,18 @@ class WAHAClient:
         response = self._make_request("POST", f"/api/sessions/{session_name}/logout")
         return response.json()
     
+    def request_pairing_code(self, session_name: str, phone_number: str = None) -> Dict:
+        """Request pairing code for WhatsApp login - returns code to enter in WhatsApp"""
+        payload = {}
+        if phone_number:
+            # WAHA expects phone number without + sign
+            # Example: 17024215458 not +17024215458
+            phone_number = phone_number.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+            payload["phoneNumber"] = phone_number
+            # method can be null or not included
+        response = self._make_request("POST", f"/api/{session_name}/auth/request-code", json=payload)
+        return response.json()
+    
     def delete_session(self, session_name: str) -> Dict:
         """Delete session"""
         response = self._make_request("DELETE", f"/api/sessions/{session_name}")

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CuWapp - Preparing Your Workspace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Animated background */
+        .bg-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 80%, #5b21b6 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, #1e40af 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, #7c3aed 0%, transparent 50%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Floating particles */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px);
+            }
+        }
+        
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .logo-container {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+        
+        .logo {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff0080, #7928ca, #ff0080);
+            border-radius: 25px;
+            opacity: 0;
+            z-index: -1;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            background: linear-gradient(120deg, #fff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        
+        .tagline {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        .status {
+            font-size: 1.15rem;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+            min-height: 30px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Modern loader */
+        .loader {
+            width: 60px;
+            height: 60px;
+            margin: 2rem auto;
+            position: relative;
+        }
+        
+        .loader-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #667eea;
+            animation: spin 1.5s linear infinite;
+        }
+        
+        .loader-ring:nth-child(2) {
+            width: 75%;
+            height: 75%;
+            top: 12.5%;
+            left: 12.5%;
+            border-top-color: #764ba2;
+            animation: spin 1.5s linear infinite reverse;
+            animation-delay: 0.25s;
+        }
+        
+        .loader-ring:nth-child(3) {
+            width: 50%;
+            height: 50%;
+            top: 25%;
+            left: 25%;
+            border-top-color: #ff0080;
+            animation: spin 1.5s linear infinite;
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 1rem;
+            border-radius: 15px;
+            margin-top: 1rem;
+            display: none;
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .retry-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .retry-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .retry-btn:hover::before {
+            left: 100%;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .retry-btn.show {
+            display: inline-block;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 2rem;
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2, #ff0080);
+            width: 0%;
+            animation: progress 4s ease-out forwards;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            20% { width: 25%; }
+            40% { width: 45%; }
+            60% { width: 65%; }
+            80% { width: 85%; }
+            100% { width: 100%; }
+        }
+        
+        .status-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: dotPulse 1.4s ease-in-out infinite;
+        }
+        
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes dotPulse {
+            0%, 80%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.3);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="bg-animation"></div>
+    
+    <!-- Floating particles -->
+    <div class="particles" id="particles"></div>
+    
+    <div class="container">
+        <div class="logo-container">
+            <div class="logo">
+                <span style="filter: drop-shadow(0 0 20px rgba(255,255,255,0.5));">⚡</span>
+            </div>
+        </div>
+        <h1>CuWapp</h1>
+        <div class="tagline">WhatsApp Business Automation</div>
+        <div class="status" id="status">
+            Setting up your workspace
+            <span class="status-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </span>
+        </div>
+        <div class="loader" id="loader">
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="error" id="error"></div>
+        <button class="retry-btn" id="retryBtn" onclick="retrySetup()">Retry Setup</button>
+    </div>
+
+    <script>
+        // Get query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const userId = urlParams.get('user_id');
+        const plan = urlParams.get('plan') || 'free';
+        
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        createParticles();
+        
+        // Status messages with emojis
+        const statusMessages = [
+            'Authenticating user',
+            'Provisioning infrastructure',
+            'Initializing containers',
+            'Configuring WhatsApp services',
+            'Finalizing setup'
+        ];
+        
+        let messageIndex = 0;
+        let statusInterval;
+        
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            if (messageIndex < statusMessages.length) {
+                statusEl.innerHTML = statusMessages[messageIndex] + 
+                    '<span class="status-dots">' +
+                    '<span class="dot"></span>' +
+                    '<span class="dot"></span>' +
+                    '<span class="dot"></span>' +
+                    '</span>';
+                messageIndex++;
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').classList.add('show');
+            document.getElementById('retryBtn').classList.add('show');
+            document.querySelector('.progress').style.display = 'none';
+            clearInterval(statusInterval);
+        }
+        
+        async function setupInfrastructure() {
+            try {
+                // Update status periodically
+                statusInterval = setInterval(updateStatus, 1000);
+                updateStatus();
+                
+                if (!token || !userId) {
+                    showError('Missing authentication credentials. Please login again.');
+                    window.location.href = 'https://auth.cuwapp.com';
+                    return;
+                }
+                
+                // Call API Gateway to provision infrastructure
+                const response = await fetch('/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-User-Id': userId,
+                        'X-Plan': plan
+                    }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to provision infrastructure');
+                }
+                
+                const data = await response.json();
+                
+                // Store infrastructure URLs in localStorage
+                localStorage.setItem('auth_token', token);
+                localStorage.setItem('user_id', userId);
+                localStorage.setItem('user_plan', plan);
+                localStorage.setItem('user_infrastructure', JSON.stringify({
+                    apiUrl: data.api_url,
+                    warmerUrl: data.warmer_url,
+                    campaignUrl: data.campaign_url,
+                    wahaUrl: data.waha_url || 'http://localhost:3000'
+                }));
+                
+                // Also store in sessionStorage for immediate use
+                sessionStorage.setItem('API_URL', data.api_url);
+                sessionStorage.setItem('WARMER_URL', data.warmer_url);
+                sessionStorage.setItem('CAMPAIGN_URL', data.campaign_url);
+                sessionStorage.setItem('WAHA_URL', data.waha_url || 'http://localhost:3000');
+                
+                // Clear status interval
+                clearInterval(statusInterval);
+                
+                // Update status to complete
+                document.getElementById('status').innerHTML = '✨ Setup complete! Redirecting...';
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    window.location.href = 'https://dashboard.cuwapp.com';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Setup error:', error);
+                showError(error.message || 'Failed to setup infrastructure. Please try again.');
+            }
+        }
+        
+        function retrySetup() {
+            // Reset UI
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('retryBtn').classList.remove('show');
+            document.getElementById('loader').style.display = 'block';
+            document.querySelector('.progress').style.display = 'block';
+            
+            // Reset progress bar animation
+            const progressBar = document.querySelector('.progress-bar');
+            progressBar.style.animation = 'none';
+            setTimeout(() => {
+                progressBar.style.animation = 'progress 4s ease-out forwards';
+            }, 10);
+            
+            messageIndex = 0;
+            
+            // Retry setup
+            setupInfrastructure();
+        }
+        
+        // Start setup when page loads
+        window.addEventListener('load', () => {
+            setupInfrastructure();
+        });
+        
+        // Handle visibility change (when user returns to tab)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && document.getElementById('error').classList.contains('show')) {
+                // Auto-retry if there was an error and user returns to tab
+                retrySetup();
+            }
+        });
+    </script>
+</body>
+</html>

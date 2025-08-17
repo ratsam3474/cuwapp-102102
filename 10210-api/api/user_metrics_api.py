@@ -79,7 +79,7 @@ async def get_campaign_metrics(user_id: str = Query(..., description="User ID or
             
             return {
                 "user_context": user_id,
-                "is_admin": user_id == "admin",
+                "is_admin": False,  # No admin access allowed
                 "metrics": {
                     "total_campaigns_created": len(all_campaigns),
                     "total_active_campaigns": len(active_campaigns),
@@ -100,11 +100,9 @@ async def get_campaign_metrics(user_id: str = Query(..., description="User ID or
 
 
 @router.get("/api/metrics/warmer")
-async def get_warmer_metrics(user_id: str = Query(..., description="User ID or 'admin' for all users")):
+async def get_warmer_metrics(user_id: str = Query(..., description="User ID is required")):
     """
-    Get warmer metrics
-    - If user_id = 'admin': Returns metrics for ALL users combined
-    - If user_id = specific user: Returns metrics for that user only
+    Get warmer metrics for the specific user only
     
     Returns:
     - total_warmer_minutes: Total minutes of warmer usage
@@ -113,15 +111,14 @@ async def get_warmer_metrics(user_id: str = Query(..., description="User ID or '
     """
     try:
         with get_db() as db:
-            # Build query based on user_id
+            # SECURITY: No admin mode - only return user's own data
             if user_id == "admin":
-                # Get ALL warmer sessions from ALL users
-                warmer_sessions = db.query(WarmerSession).all()
-            else:
-                # Get warmer sessions for specific user
-                warmer_sessions = db.query(WarmerSession).filter(
-                    WarmerSession.user_id == user_id
-                ).all()
+                raise HTTPException(status_code=403, detail="Admin access not allowed")
+            
+            # Get warmer sessions for specific user
+            warmer_sessions = db.query(WarmerSession).filter(
+                WarmerSession.user_id == user_id
+            ).all()
             
             # Calculate total warmer minutes from database
             total_minutes = 0.0
@@ -145,7 +142,7 @@ async def get_warmer_metrics(user_id: str = Query(..., description="User ID or '
             
             return {
                 "user_context": user_id,
-                "is_admin": user_id == "admin",
+                "is_admin": False,  # No admin access allowed
                 "metrics": {
                     "total_warmer_minutes": round(total_minutes, 2),
                     "total_group_messages": total_group_messages,
@@ -174,7 +171,7 @@ async def get_all_metrics(user_id: str = Query(..., description="User ID or 'adm
         
         return {
             "user_context": user_id,
-            "is_admin": user_id == "admin",
+            "is_admin": False,  # No admin access allowed
             "campaign": campaign_metrics["metrics"],
             "warmer": warmer_metrics["metrics"],
             "timestamp": datetime.utcnow().isoformat()

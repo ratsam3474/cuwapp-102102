@@ -4,7 +4,7 @@ WhatsApp Warmer API Endpoints
 
 import logging
 from typing import List, Optional, Dict
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 from warmer.warmer_engine import warmer_engine
 from warmer.models import WarmerStatus
@@ -50,22 +50,15 @@ class JoinGroupsRequest(BaseModel):
 
 # API Endpoints
 @router.get("/")
-async def list_warmers(user_id: Optional[str] = None) -> WarmerResponse:
+async def list_warmers(user_id: str = Query(..., description="User ID is required")) -> WarmerResponse:
     """
     List warmer sessions for a specific user
     """
     try:
-        # Get all warmers
-        all_warmers = warmer_engine.get_all_warmers()
+        # Get all warmers (excluding archived)
+        all_warmers = warmer_engine.get_all_warmers(exclude_archived=True)
         
-        # If no user_id, return all (admin mode)
-        if not user_id:
-            return WarmerResponse(
-                success=True,
-                message=f"Found {len(all_warmers)} warmer sessions",
-                data={"warmers": all_warmers}
-            )
-        
+        # SECURITY: Always filter by user_id
         # Filter warmers for this user
         user_warmers = [w for w in all_warmers if w.get('user_id') == user_id]
         
@@ -83,7 +76,7 @@ async def list_warmers(user_id: Optional[str] = None) -> WarmerResponse:
 
 
 @router.post("/create")
-async def create_warmer(request: CreateWarmerRequest, user_id: Optional[str] = None) -> WarmerResponse:
+async def create_warmer(request: CreateWarmerRequest, user_id: str = Query(..., description="User ID is required")) -> WarmerResponse:
     """
     Create a new warmer session
     
@@ -93,28 +86,27 @@ async def create_warmer(request: CreateWarmerRequest, user_id: Optional[str] = N
     - User must have warmer hours available in their plan
     """
     try:
-        # Check subscription limits if user_id provided
-        if user_id:
-            from database.subscription_models import UserSubscription
-            from database.connection import get_db
+        # Check subscription limits
+        from database.subscription_models import UserSubscription
+        from database.connection import get_db
+        
+        with get_db() as db:
+            user_subscription = db.query(UserSubscription).filter(
+                UserSubscription.user_id == user_id
+            ).first()
             
-            with get_db() as db:
-                user_subscription = db.query(UserSubscription).filter(
-                    UserSubscription.user_id == user_id
-                ).first()
-                
-                if not user_subscription:
-                    return WarmerResponse(
-                        success=False,
-                        error="No subscription found. Please subscribe to use warmer."
-                    )
-                
-                # Check if user has warmer access
-                if user_subscription.warmer_duration_hours <= 0:
-                    return WarmerResponse(
-                        success=False,
-                        error=f"WhatsApp Warmer is not available on {user_subscription.plan_type.value} plan. Please upgrade to Hobby or higher."
-                    )
+            if not user_subscription:
+                return WarmerResponse(
+                    success=False,
+                    error="No subscription found. Please subscribe to use warmer."
+                )
+            
+            # Check if user has warmer access
+            if user_subscription.warmer_duration_hours <= 0:
+                return WarmerResponse(
+                    success=False,
+                    error=f"WhatsApp Warmer is not available on {user_subscription.plan_type.value} plan. Please upgrade to Hobby or higher."
+                )
         
         result = await warmer_engine.create_warmer_session(
             name=request.name,
@@ -272,15 +264,12 @@ async def get_warmer_status(warmer_id: int) -> WarmerStatusResponse:
 
 
 @router.get("/list")
-async def list_warmers_alt(user_id: Optional[str] = None) -> List[Dict]:
-    """Get warmer sessions for a specific user"""
+async def list_warmers_alt(user_id: str = Query(..., description="User ID is required")) -> List[Dict]:
+    """Get warmer sessions for a specific user (excluding archived)"""
     try:
-        all_warmers = warmer_engine.get_all_warmers()
+        all_warmers = warmer_engine.get_all_warmers(exclude_archived=True)
         
-        # If no user_id, return all (admin mode)
-        if not user_id:
-            return all_warmers
-        
+        # SECURITY: Always filter by user_id
         # Filter warmers for this user
         user_warmers = [w for w in all_warmers if w.get('user_id') == user_id]
         return user_warmers
@@ -715,21 +704,25 @@ async def delete_warmer(warmer_id: int) -> WarmerResponse:
                 error="Cannot delete active warmer. Stop it first."
             )
         
-        # Delete from database
+        # Archive instead of delete (soft delete for analytics)
         from database.connection import get_db
         from warmer.models import WarmerSession
+        from datetime import datetime
         
         with get_db() as db:
             warmer = db.query(WarmerSession).filter(WarmerSession.id == warmer_id).first()
             if not warmer:
                 raise HTTPException(status_code=404, detail="Warmer session not found")
             
-            db.delete(warmer)
+            # Archive the warmer instead of deleting
+            warmer.is_archived = True
+            warmer.archived_at = datetime.utcnow()
+            warmer.status = "archived"
             db.commit()
         
         return WarmerResponse(
             success=True,
-            message="Warmer session deleted successfully"
+            message="Warmer session archived successfully"
         )
         
     except HTTPException:

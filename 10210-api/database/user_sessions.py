@@ -3,7 +3,7 @@ User Session Management
 Links WhatsApp sessions to Clerk users
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database.connection import Base
@@ -16,8 +16,8 @@ class UserWhatsAppSession(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(255), nullable=False, index=True)  # Clerk user ID
-    session_name = Column(String(255), nullable=False, unique=True, index=True)  # Display name shown to user
-    waha_session_name = Column(String(255), nullable=True, unique=True, index=True)  # Actual WAHA session name
+    session_name = Column(String(255), nullable=False, index=True)  # Display name shown to user (unique per user)
+    waha_session_name = Column(String(255), nullable=True, unique=True, index=True)  # Actual WAHA session name (globally unique)
     
     # Session details
     phone_number = Column(String(50), nullable=True)
@@ -36,6 +36,11 @@ class UserWhatsAppSession(Base):
     
     # Configuration
     config = Column(Text, default="{}")  # JSON configuration
+    
+    # Add composite unique constraint - session_name must be unique per user
+    __table_args__ = (
+        UniqueConstraint('user_id', 'session_name', name='_user_session_name_uc'),
+    )
     
     def get_config(self):
         """Get configuration as dictionary"""

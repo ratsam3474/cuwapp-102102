@@ -24,5 +24,8 @@ RUN mkdir -p /app/data
 # Expose port
 EXPOSE 8000
 
-# Start the application
-CMD ["python", "main.py"]
+# Install gunicorn
+RUN pip install gunicorn
+
+# Start the application with gunicorn in production
+CMD ["gunicorn", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300"]

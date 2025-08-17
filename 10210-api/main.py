@@ -126,7 +126,26 @@ async def health_check():
 # Initialize WAHA client with correct base URL
 # Use environment variable or default to internal Docker service name
 WAHA_BASE_URL = os.getenv("WAHA_BASE_URL", "http://localhost:4500")
-waha = WAHAClient(base_url=WAHA_BASE_URL)
+waha = WAHAClient(base_url=WAHA_BASE_URL)  # Default client for backward compatibility
+
+def get_waha_client_for_session(user_id: str, session_name: str) -> WAHAClient:
+    """Get WAHA client for a specific session, using the correct WAHA instance"""
+    from database.connection import get_db
+    from database.user_sessions import UserWhatsAppSession
+    
+    with get_db() as db:
+        # Look up session to get WAHA instance URL
+        session = db.query(UserWhatsAppSession).filter(
+            UserWhatsAppSession.user_id == user_id,
+            UserWhatsAppSession.session_name == session_name
+        ).first()
+        
+        if session and hasattr(session, 'waha_instance_url') and session.waha_instance_url:
+            # Use session-specific WAHA instance
+            return WAHAClient(base_url=session.waha_instance_url)
+        else:
+            # Fall back to default WAHA instance
+            return waha
 
 # Initialize Phase 2 components if available
 if PHASE_2_ENABLED:
@@ -156,15 +175,17 @@ if PHASE_2_ENABLED:
         
         # Add direct /warmer endpoint
         @app.get("/warmer")
-        async def get_warmer_list():
-            """Direct endpoint for /warmer to list all warmer sessions"""
+        async def get_warmer_list(user_id: str = Query(..., description="User ID is required")):
+            """Get warmer sessions for authenticated user only"""
             try:
                 from warmer.warmer_engine import warmer_engine
-                warmers = warmer_engine.get_all_warmers()
+                # SECURITY: Filter warmers by user_id
+                all_warmers = warmer_engine.get_all_warmers()
+                user_warmers = [w for w in all_warmers if w.get('user_id') == user_id]
                 return {
                     "success": True,
-                    "message": f"Found {len(warmers)} warmer sessions",
-                    "data": {"warmers": warmers}
+                    "message": f"Found {len(user_warmers)} warmer sessions",
+                    "data": {"warmers": user_warmers}
                 }
             except Exception as e:
                 logger.error(f"Error listing warmers: {str(e)}")
@@ -328,17 +349,13 @@ async def payment_cancelled():
 # ==================== SESSION MANAGEMENT ====================
 
 @app.get("/api/sessions")
-async def get_sessions(user_id: Optional[str] = Query(None)):
+async def get_sessions(user_id: str = Query(..., description="User ID is required")):
     """Get sessions for a specific user"""
     try:
-        # Get all sessions from WAHA
-        all_sessions = waha.get_sessions()
-        
-        # If no user_id provided, return all (admin mode)
+        # SECURITY: Require user_id - never return all sessions publicly
         if not user_id:
-            return {"success": True, "data": all_sessions}
+            return {"success": False, "data": [], "error": "Authentication required"}
         
-        # Filter sessions for this user
         from database.user_sessions import UserWhatsAppSession
         from database.connection import get_db
         
@@ -348,7 +365,26 @@ async def get_sessions(user_id: Optional[str] = Query(None)):
                 UserWhatsAppSession.user_id == user_id
             ).all()
             
-            # Create mapping of WAHA names to display names
+            # Group sessions by WAHA instance URL
+            sessions_by_instance = {}
+            for s in user_sessions:
+                instance_url = getattr(s, 'waha_instance_url', None) or WAHA_BASE_URL
+                if instance_url not in sessions_by_instance:
+                    sessions_by_instance[instance_url] = []
+                sessions_by_instance[instance_url].append(s)
+            
+            # Get sessions from each WAHA instance
+            all_waha_sessions = []
+            for instance_url, db_sessions in sessions_by_instance.items():
+                try:
+                    # Create client for this specific WAHA instance
+                    instance_client = WAHAClient(base_url=instance_url)
+                    instance_sessions = instance_client.get_sessions()
+                    all_waha_sessions.extend(instance_sessions)
+                except Exception as e:
+                    logger.warning(f"Could not get sessions from {instance_url}: {e}")
+            
+            # Create mapping of WAHA names to display names and filter
             waha_to_display = {}
             for s in user_sessions:
                 if s.waha_session_name:
@@ -359,7 +395,7 @@ async def get_sessions(user_id: Optional[str] = Query(None)):
             
             # Filter and map WAHA sessions to include display names
             filtered_sessions = []
-            for session in all_sessions:
+            for session in all_waha_sessions:
                 waha_name = session.get("name")
                 if waha_name in waha_to_display:
                     # Replace the name with display name for frontend
@@ -424,11 +460,34 @@ def get_waha_session_name(session_name: str, user_id: Optional[str] = None) -> s
     logger.warning(f"No mapping found at all, returning original: '{session_name}'")
     return session_name
 
-@app.post("/api/sessions")
-async def create_session(session_data: SessionCreate, user_id: Optional[str] = Query(None)):
-    """Create new session and associate with user"""
+@app.get("/api/sessions/names")
+async def get_existing_session_names(user_id: str = Query(...)):
+    """Get list of existing session names for a user"""
     try:
-        # Check subscription limits if user_id provided
+        from database.user_sessions import UserWhatsAppSession
+        from database.connection import get_db
+        
+        with get_db() as db:
+            sessions = db.query(UserWhatsAppSession.session_name).filter(
+                UserWhatsAppSession.user_id == user_id
+            ).all()
+            
+            return {
+                "success": True,
+                "session_names": [s[0] for s in sessions]
+            }
+    except Exception as e:
+        logger.error(f"Error getting session names: {str(e)}")
+        return {"success": False, "session_names": []}
+
+@app.post("/api/sessions")
+async def create_session(session_data: SessionCreate, user_id: str = Query(..., description="User ID is required")):
+    """Create new session and associate with user"""
+    waha_session_created = False
+    waha_session_name = None
+    
+    try:
+        # Check subscription limits
         if user_id:
             from database.user_sessions import UserWhatsAppSession
             from database.subscription_models import UserSubscription
@@ -459,8 +518,22 @@ async def create_session(session_data: SessionCreate, user_id: Optional[str] = Q
                         detail=f"Session limit reached. Your {user_subscription.plan_type.value} plan allows {user_subscription.max_sessions} session(s). Please upgrade your plan or remove existing sessions."
                     )
                 
-                # Update current sessions counter
-                user_subscription.current_sessions = existing_sessions + 1
+                # Check if session name already exists for THIS USER (not globally)
+                existing_name = db.query(UserWhatsAppSession).filter(
+                    UserWhatsAppSession.user_id == user_id,
+                    UserWhatsAppSession.session_name == session_data.name
+                ).first()
+                
+                if existing_name:
+                    # Get all existing session names for better error message
+                    all_sessions = db.query(UserWhatsAppSession.session_name).filter(
+                        UserWhatsAppSession.user_id == user_id
+                    ).all()
+                    existing_names = [s[0] for s in all_sessions]
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Session name '{session_data.name}' already exists for your account. Please choose a different name. Your existing sessions: {', '.join(existing_names)}"
+                    )
                 
                 # Generate unique WAHA session name
                 import uuid
@@ -471,17 +544,7 @@ async def create_session(session_data: SessionCreate, user_id: Optional[str] = Q
                 
                 logger.info(f"Creating WAHA session with UUID name: {waha_session_name} (display name: {session_data.name})")
                 
-                # Create session in WAHA with generated name
-                result = waha.create_session(waha_session_name, session_data.config)
-                
-                # Start the session immediately so it appears in the list
-                try:
-                    waha.start_session(waha_session_name)
-                    logger.info(f"Started session {waha_session_name} after creation")
-                except Exception as e:
-                    logger.warning(f"Could not auto-start session {waha_session_name}: {e}")
-                
-                # Create user session record with both display and WAHA names
+                # Create user session record FIRST (before WAHA) but don't commit yet
                 user_session = UserWhatsAppSession(
                     user_id=user_id,
                     session_name=session_data.name,  # User's chosen display name
@@ -491,35 +554,87 @@ async def create_session(session_data: SessionCreate, user_id: Optional[str] = Q
                     is_primary=(existing_sessions == 0)  # First session is primary
                 )
                 
+                # Add to database (but don't commit yet)
                 db.add(user_session)
-                db.commit()
                 
-                # Add the display name to the result for frontend
-                result['display_name'] = session_data.name
-                
-                logger.info(f"Session {session_data.name} created for user {user_id} ({existing_sessions + 1}/{user_subscription.max_sessions})")
-        else:
-            # No user_id provided - this should not happen, reject the request
-            raise HTTPException(
-                status_code=400,
-                detail="user_id is required to create a session. Please sign in first."
-            )
+                try:
+                    # Get WAHA instance URL based on user's plan
+                    from waha_pool_manager import waha_pool
+                    waha_instance_url = waha_pool.get_or_create_instance_for_user(user_id, waha_session_name)
+                    
+                    # Create WAHA client for this specific instance
+                    from waha_functions import WAHAClient
+                    waha_instance = WAHAClient(base_url=waha_instance_url)
+                    
+                    # Create session in WAHA with generated name
+                    result = waha_instance.create_session(waha_session_name, session_data.config)
+                    waha_session_created = True
+                    
+                    # Save WAHA instance URL to session record
+                    user_session.waha_instance_url = waha_instance_url
+                    waha_pool.save_session_assignment(user_id, waha_session_name, waha_instance_url)
+                    
+                    # Start the session immediately so it appears in the list
+                    try:
+                        waha_instance.start_session(waha_session_name)
+                        logger.info(f"Started session {waha_session_name} after creation")
+                        user_session.status = "started"
+                    except Exception as e:
+                        logger.warning(f"Could not auto-start session {waha_session_name}: {e}")
+                    
+                    # Update current sessions counter only after WAHA creation succeeds
+                    user_subscription.current_sessions = existing_sessions + 1
+                    
+                    # Commit to database only after WAHA session is created successfully
+                    db.commit()
+                    
+                    # Add the display name to the result for frontend
+                    result['display_name'] = session_data.name
+                    
+                    logger.info(f"Session {session_data.name} created for user {user_id} ({existing_sessions + 1}/{user_subscription.max_sessions})")
+                    
+                    return {"success": True, "data": result}
+                    
+                except Exception as waha_error:
+                    # If WAHA creation fails, rollback database changes
+                    db.rollback()
+                    logger.error(f"Failed to create WAHA session: {waha_error}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to create WhatsApp session: {str(waha_error)}"
+                    )
         
-        return {"success": True, "data": result}
+        return {"success": False, "error": "User ID is required"}
+        
     except HTTPException:
+        # Re-raise HTTP exceptions
         raise
     except Exception as e:
+        # If we created a WAHA session but database failed, clean it up
+        if waha_session_created and waha_session_name:
+            try:
+                logger.warning(f"Cleaning up orphaned WAHA session {waha_session_name}")
+                # Use the instance-specific client if available
+                if 'waha_instance' in locals():
+                    waha_instance.delete_session(waha_session_name)
+                else:
+                    waha.delete_session(waha_session_name)
+            except Exception as cleanup_error:
+                logger.error(f"Failed to clean up orphaned session {waha_session_name}: {cleanup_error}")
+        
         logger.error(f"Error creating session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/sessions/{session_name}")
-async def get_session_info(session_name: str, user_id: Optional[str] = Query(None)):
+async def get_session_info(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Get session information"""
     try:
         # Get the actual WAHA session name
         actual_session_name = get_waha_session_name(session_name, user_id)
         
-        info = waha.get_session_info(actual_session_name)
+        # Get the correct WAHA client for this session
+        waha_client = get_waha_client_for_session(user_id, session_name)
+        info = waha_client.get_session_info(actual_session_name)
         # Add display name to response
         info['display_name'] = session_name
         return {"success": True, "data": info}
@@ -528,29 +643,33 @@ async def get_session_info(session_name: str, user_id: Optional[str] = Query(Non
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sessions/{session_name}/start")
-async def start_session(session_name: str, user_id: Optional[str] = Query(None)):
+async def start_session(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Start session"""
     try:
         actual_session_name = get_waha_session_name(session_name, user_id)
-        result = waha.start_session(actual_session_name)
+        # Get the correct WAHA client for this session
+        waha_client = get_waha_client_for_session(user_id, session_name)
+        result = waha_client.start_session(actual_session_name)
         return {"success": True, "data": result}
     except Exception as e:
         logger.error(f"Error starting session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sessions/{session_name}/stop")
-async def stop_session(session_name: str, user_id: Optional[str] = Query(None)):
+async def stop_session(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Stop session"""
     try:
         actual_session_name = get_waha_session_name(session_name, user_id)
-        result = waha.stop_session(actual_session_name)
+        # Get the correct WAHA client for this session
+        waha_client = get_waha_client_for_session(user_id, session_name)
+        result = waha_client.stop_session(actual_session_name)
         return {"success": True, "data": result}
     except Exception as e:
         logger.error(f"Error stopping session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sessions/{session_name}/restart")
-async def restart_session(session_name: str, user_id: Optional[str] = Query(None)):
+async def restart_session(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Restart session"""
     try:
         actual_session_name = get_waha_session_name(session_name, user_id)
@@ -560,8 +679,75 @@ async def restart_session(session_name: str, user_id: Optional[str] = Query(None
         logger.error(f"Error restarting session: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sessions/{session_name}/logout")
+async def logout_session(session_name: str, user_id: str = Query(..., description="User ID is required")):
+    """Logout from WhatsApp (disconnect but keep session)"""
+    try:
+        actual_session_name = get_waha_session_name(session_name, user_id)
+        result = waha.logout_session(actual_session_name)
+        
+        # Update session status in database
+        from database.user_sessions import UserWhatsAppSession
+        from database.connection import get_db
+        
+        with get_db() as db:
+            user_session = db.query(UserWhatsAppSession).filter(
+                UserWhatsAppSession.user_id == user_id,
+                UserWhatsAppSession.session_name == session_name
+            ).first()
+            
+            if user_session:
+                user_session.status = "logged_out"
+                db.commit()
+        
+        return {"success": True, "message": f"Logged out from WhatsApp", "data": result}
+    except Exception as e:
+        logger.error(f"Error logging out session: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sessions/{session_name}/auth/request-code")
+async def request_pairing_code(session_name: str, auth_data: dict, user_id: str = Query(..., description="User ID is required")):
+    """Request pairing code for WhatsApp login - the code will be displayed for user to enter in WhatsApp"""
+    try:
+        actual_session_name = get_waha_session_name(session_name, user_id)
+        phone_number = auth_data.get('phoneNumber', '')
+        
+        # Clean phone number - remove all non-digits and plus sign
+        if phone_number:
+            # Remove +, spaces, dashes, parentheses
+            phone_number = ''.join(filter(str.isdigit, phone_number))
+            # WAHA expects just digits, no plus sign
+            # Example: 17024215458 not +17024215458
+        
+        logger.info(f"Requesting pairing code for session {actual_session_name} with phone {phone_number}")
+        
+        # Request pairing code from WAHA
+        result = waha.request_pairing_code(actual_session_name, phone_number)
+        
+        if result:
+            # Extract the pairing code from the response
+            pairing_code = result.get('code', '')
+            if pairing_code:
+                logger.info(f"Pairing code generated successfully: {pairing_code}")
+                return {
+                    "success": True, 
+                    "message": "Pairing code generated. Enter this code in WhatsApp on your phone.",
+                    "code": pairing_code,
+                    "phoneNumber": phone_number,
+                    "data": result
+                }
+            else:
+                logger.error(f"No pairing code in response: {result}")
+                return {"success": False, "error": "Failed to generate pairing code - no code returned"}
+        else:
+            logger.error("Failed to request pairing code - no result")
+            return {"success": False, "error": "Failed to request pairing code"}
+    except Exception as e:
+        logger.error(f"Error requesting pairing code: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/api/sessions/{session_name}")
-async def delete_session(session_name: str, user_id: Optional[str] = Query(None)):
+async def delete_session(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Delete session and update user's session counter"""
     try:
         # Get the actual WAHA session name
@@ -640,18 +826,20 @@ async def delete_session(session_name: str, user_id: Optional[str] = Query(None)
 # ==================== AUTHENTICATION ====================
 
 @app.get("/api/sessions/{session_name}/qr")
-async def get_qr_code(session_name: str, user_id: Optional[str] = Query(None)):
+async def get_qr_code(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Get QR code image"""
     try:
         actual_session_name = get_waha_session_name(session_name, user_id)
-        qr_image = waha.get_qr_code(actual_session_name)
+        # Get the correct WAHA client for this session
+        waha_client = get_waha_client_for_session(user_id, session_name)
+        qr_image = waha_client.get_qr_code(actual_session_name)
         return Response(content=qr_image, media_type="image/png")
     except Exception as e:
         logger.error(f"Error getting QR code: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/sessions/{session_name}/screenshot")
-async def get_screenshot(session_name: str, user_id: Optional[str] = Query(None)):
+async def get_screenshot(session_name: str, user_id: str = Query(..., description="User ID is required")):
     """Get screenshot"""
     try:
         # Get the actual WAHA session name from display name
@@ -798,7 +986,7 @@ async def archive_chat(session: str, chat_id: str):
 # ==================== CONTACTS ====================
 
 @app.get("/api/contacts/{session}")
-async def get_all_contacts(session: str, user_id: Optional[str] = Query(None)):
+async def get_all_contacts(session: str, user_id: str = Query(..., description="User ID is required")):
     """Get all contacts"""
     try:
         # Get the actual WAHA session name from display name
@@ -810,7 +998,7 @@ async def get_all_contacts(session: str, user_id: Optional[str] = Query(None)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/contacts/{session}/export")
-async def export_contacts(session: str, user_id: Optional[str] = Query(None)):  # TODO: Get user_id from auth
+async def export_contacts(session: str, user_id: str = Query(..., description="User ID is required")):
     """Export all contacts with same 16-column format as group exports"""
     try:
         # Get the actual WAHA session name from display name
@@ -914,7 +1102,7 @@ async def export_contacts(session: str, user_id: Optional[str] = Query(None)):  
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/contacts/{session}/check/{phone}")
-async def check_number_exists(session: str, phone: str, user_id: Optional[str] = Query(None)):
+async def check_number_exists(session: str, phone: str, user_id: str = Query(..., description="User ID is required")):
     """Check if number exists on WhatsApp"""
     try:
         # Get the actual WAHA session name from display name
@@ -952,7 +1140,7 @@ async def unblock_contact(contact_action: ContactAction):
 # ==================== GROUPS ====================
 
 @app.get("/api/groups/{session}")
-async def get_groups(session: str, user_id: Optional[str] = Query(None), lightweight: bool = True):
+async def get_groups(session: str, user_id: str = Query(..., description="User ID is required"), lightweight: bool = True):
     """Get all groups - lightweight by default (no participants)"""
     try:
         # Get the actual WAHA session name from display name
@@ -979,7 +1167,7 @@ async def get_groups(session: str, user_id: Optional[str] = Query(None), lightwe
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/groups/{session}/for-campaign")
-async def get_groups_for_campaign(session: str, user_id: Optional[str] = Query(None)):
+async def get_groups_for_campaign(session: str, user_id: str = Query(..., description="User ID is required")):
     """Get groups formatted for campaign source selection"""
     try:
         # Get the actual WAHA session name from display name
@@ -1017,7 +1205,7 @@ async def get_groups_for_campaign(session: str, user_id: Optional[str] = Query(N
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/contacts/{session}/for-campaign")
-async def get_contacts_for_campaign(session: str, user_id: Optional[str] = Query(None)):
+async def get_contacts_for_campaign(session: str, user_id: str = Query(..., description="User ID is required")):
     """Get contacts for campaign source selection with checkboxes"""
     try:
         # Get the actual WAHA session name from display name
@@ -1070,7 +1258,7 @@ async def get_contacts_for_campaign(session: str, user_id: Optional[str] = Query
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/groups/{session}")
-async def create_group(session: str, group_data: GroupCreate, user_id: Optional[str] = Query(None)):
+async def create_group(session: str, group_data: GroupCreate, user_id: str = Query(..., description="User ID is required")):
     """Create group"""
     try:
         # Get the actual WAHA session name from display name
@@ -1082,7 +1270,7 @@ async def create_group(session: str, group_data: GroupCreate, user_id: Optional[
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/groups/{session}/{group_id}")
-async def get_group_info(session: str, group_id: str, user_id: Optional[str] = Query(None)):
+async def get_group_info(session: str, group_id: str, user_id: str = Query(..., description="User ID is required")):
     """Get group info"""
     try:
         # Get the actual WAHA session name from display name
@@ -1094,7 +1282,7 @@ async def get_group_info(session: str, group_id: str, user_id: Optional[str] = Q
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/groups/{session}/{group_id}/leave")
-async def leave_group(session: str, group_id: str, user_id: Optional[str] = Query(None)):
+async def leave_group(session: str, group_id: str, user_id: str = Query(..., description="User ID is required")):
     """Leave group"""
     try:
         # Get the actual WAHA session name from display name
@@ -1106,7 +1294,7 @@ async def leave_group(session: str, group_id: str, user_id: Optional[str] = Quer
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/groups/{session}/{group_id}/export")
-async def export_group_participants(session: str, group_id: str, user_id: Optional[str] = Query(None)):  # TODO: Get user_id from auth
+async def export_group_participants(session: str, group_id: str, user_id: str = Query(..., description="User ID is required")):
     """Export group participants with detailed contact information"""
     try:
         # Get the actual WAHA session name from display name
@@ -1263,7 +1451,7 @@ async def ping_server():
 if PHASE_2_ENABLED:
     
     @app.get("/api/campaigns")
-    async def get_campaigns(user_id: Optional[str] = Query(None)):
+    async def get_campaigns(user_id: str = Query(..., description="User ID is required")):
         """Get campaigns for a specific user"""
         try:
             from database.models import Campaign
@@ -1271,12 +1459,8 @@ if PHASE_2_ENABLED:
             from jobs.models import CampaignResponse
             
             with get_db() as db:
-                if not user_id:
-                    # Admin mode - get all campaigns
-                    campaigns = db.query(Campaign).order_by(Campaign.created_at.desc()).all()
-                else:
-                    # Get user's campaigns from database directly
-                    campaigns = db.query(Campaign).filter(
+                # Get user's campaigns from database directly
+                campaigns = db.query(Campaign).filter(
                         Campaign.user_id == user_id
                     ).order_by(Campaign.created_at.desc()).all()
                 
@@ -1435,7 +1619,7 @@ Generate exactly {count} variations, one per line:"""
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/campaigns")
-    async def create_campaign(campaign_data: CampaignCreate, user_id: Optional[str] = Query(None)):
+    async def create_campaign(campaign_data: CampaignCreate, user_id: str = Query(..., description="User ID is required")):
         """Create new campaign"""
         try:
             # Add user_id to campaign data
@@ -1758,7 +1942,7 @@ Generate exactly {count} variations, one per line:"""
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/campaigns/{campaign_id}/start")
-    async def start_campaign(campaign_id: int, user_id: Optional[str] = Query(None)):
+    async def start_campaign(campaign_id: int, user_id: str = Query(..., description="User ID is required")):
         """Start campaign"""
         try:
             # Verify campaign belongs to user
@@ -1790,7 +1974,7 @@ Generate exactly {count} variations, one per line:"""
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/campaigns/{campaign_id}/pause")
-    async def pause_campaign(campaign_id: int, user_id: Optional[str] = Query(None)):
+    async def pause_campaign(campaign_id: int, user_id: str = Query(..., description="User ID is required")):
         """Pause campaign"""
         try:
             # Verify campaign belongs to user
@@ -1820,7 +2004,7 @@ Generate exactly {count} variations, one per line:"""
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/campaigns/{campaign_id}/stop")
-    async def stop_campaign(campaign_id: int, user_id: Optional[str] = Query(None)):
+    async def stop_campaign(campaign_id: int, user_id: str = Query(..., description="User ID is required")):
         """Stop campaign"""
         try:
             # Verify campaign belongs to user
@@ -1910,7 +2094,7 @@ Generate exactly {count} variations, one per line:"""
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.delete("/api/campaigns/{campaign_id}")
-    async def delete_campaign(campaign_id: int, user_id: Optional[str] = Query(None)):
+    async def delete_campaign(campaign_id: int, user_id: str = Query(..., description="User ID is required")):
         """Delete campaign"""
         try:
             # Verify campaign belongs to user

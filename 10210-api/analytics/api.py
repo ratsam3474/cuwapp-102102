@@ -145,7 +145,7 @@ response_tracker = ResponseRateTracker()
 async def get_campaign_overview(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    user_id: Optional[str] = Query(None)
+    user_id: str = Query(..., description="User ID is required")
 ):
     """Get campaign analytics overview"""
     try:
@@ -250,7 +250,7 @@ async def get_campaign_detailed(
     page_size: int = Query(50, ge=1, le=100),
     campaign_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
-    user_id: Optional[str] = Query(None)
+    user_id: str = Query(..., description="User ID is required")
 ):
     """Get detailed campaign analytics with pagination"""
     try:
@@ -341,7 +341,7 @@ async def get_campaign_detailed(
 async def export_campaign_analytics(
     format: str = Query("csv", regex="^(csv|json)$"),
     campaign_id: Optional[int] = Query(None),
-    user_id: Optional[str] = Query(None)
+    user_id: str = Query(..., description="User ID is required")
 ):
     """Export campaign analytics report"""
     try:
@@ -421,14 +421,22 @@ async def export_campaign_analytics(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/analytics/warmer/overview")
-async def get_warmer_overview(user_id: Optional[str] = Query(None)):
-    """Get warmer analytics overview"""
+async def get_warmer_overview(user_id: Optional[str] = Query(None), include_archived: bool = Query(True)):
+    """Get warmer analytics overview (includes archived by default for historical data)"""
     try:
         with get_db() as db:
             # Filter by user_id if provided
             query = db.query(WarmerSession)
-            if user_id and user_id != 'admin':
+            # SECURITY: No admin mode
+            if user_id == 'admin':
+                raise HTTPException(status_code=403, detail="Admin access not allowed")
+            if user_id:
                 query = query.filter(WarmerSession.user_id == user_id)
+            
+            # By default, include archived warmers in analytics
+            if not include_archived:
+                query = query.filter((WarmerSession.is_archived == False) | (WarmerSession.is_archived == None))
+            
             warmers = query.all()
             
             total_messages = 0
@@ -584,7 +592,7 @@ async def export_warmer_transcripts(
 @router.get("/analytics/warmer/detailed")
 async def get_warmer_detailed(
     warmer_id: Optional[int] = Query(None),
-    user_id: Optional[str] = Query(None),
+    user_id: str = Query(..., description="User ID is required"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100)
 ):
@@ -596,7 +604,10 @@ async def get_warmer_detailed(
             if warmer_id:
                 query = query.filter(WarmerSession.id == warmer_id)
             # Filter by user_id if provided
-            if user_id and user_id != 'admin':
+            # SECURITY: No admin mode
+            if user_id == 'admin':
+                raise HTTPException(status_code=403, detail="Admin access not allowed")
+            if user_id:
                 query = query.filter(WarmerSession.user_id == user_id)
             
             warmers = query.all()

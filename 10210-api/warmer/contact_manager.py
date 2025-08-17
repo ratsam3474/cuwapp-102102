@@ -21,6 +21,25 @@ class ContactManager:
         self.waha = waha_client or WAHAClient()
         self.logger = logger
     
+    def _get_waha_client_for_session(self, session_name: str, user_id: str = None) -> WAHAClient:
+        """Get WAHA client with correct instance URL for a session"""
+        from database.connection import get_db
+        from database.user_sessions import UserWhatsAppSession
+        
+        with get_db() as db:
+            query = db.query(UserWhatsAppSession).filter(
+                UserWhatsAppSession.session_name == session_name
+            )
+            if user_id:
+                query = query.filter(UserWhatsAppSession.user_id == user_id)
+            
+            user_session = query.first()
+            if user_session and hasattr(user_session, 'waha_instance_url') and user_session.waha_instance_url:
+                return WAHAClient(base_url=user_session.waha_instance_url)
+        
+        # Fallback to default client
+        return self.waha
+    
     async def save_all_contacts(self, warmer_session_id: int) -> Dict[str, Any]:
         """
         Save all contacts between all participating sessions
@@ -142,8 +161,20 @@ class ContactManager:
                     if user_session and user_session.waha_session_name:
                         waha_session_name = user_session.waha_session_name
                 
-                # Get session info from WAHA
-                info = self.waha.get_session_info(waha_session_name)
+                # Get session info from WAHA using correct instance
+                # Need to get user_id from warmer if available
+                warmer = None
+                with get_db() as db2:
+                    # Try to find any warmer with this session to get user_id
+                    from warmer.models import WarmerSession
+                    warmers = db2.query(WarmerSession).all()
+                    for w in warmers:
+                        if session in w.all_sessions:
+                            warmer = w
+                            break
+                
+                waha_client = self._get_waha_client_for_session(session, warmer.user_id if warmer else None)
+                info = waha_client.get_session_info(waha_session_name)
                 if info and info.get("me"):
                     phone = info["me"].get("id", "").replace("@c.us", "")
                     name = info["me"].get("pushName", session)
@@ -260,7 +291,20 @@ class ContactManager:
             
             # Use WAHA API to save contact (requires active chat)
             self.logger.info(f"Attempting to save contact {contact_name} ({chat_id}) in session {waha_session_name}")
-            result = self.waha.create_or_update_contact(
+            
+            # Get the correct WAHA client for this session
+            # Try to get user_id from warmer if available
+            user_id = None
+            if warmer_session_id:
+                with get_db() as db2:
+                    warmer = db2.query(WarmerSession).filter(
+                        WarmerSession.id == warmer_session_id
+                    ).first()
+                    if warmer:
+                        user_id = warmer.user_id
+            
+            waha_client = self._get_waha_client_for_session(session_name, user_id)
+            result = waha_client.create_or_update_contact(
                 session=waha_session_name,
                 chat_id=chat_id,
                 name=contact_name

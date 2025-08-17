@@ -23,6 +23,27 @@ class GroupManager:
         self.logger = logger
         self.target_group_count = 5  # Target number of common groups
     
+    def _get_waha_client_for_session(self, session_name: str, user_id: str = None) -> WAHAClient:
+        """Get WAHA client with correct instance URL for a session"""
+        from database.connection import get_db
+        from database.user_sessions import UserWhatsAppSession
+        
+        with get_db() as db:
+            query = db.query(UserWhatsAppSession).filter(
+                UserWhatsAppSession.session_name == session_name
+            )
+            if user_id:
+                query = query.filter(UserWhatsAppSession.user_id == user_id)
+            
+            user_session = query.first()
+            if user_session and hasattr(user_session, 'waha_instance_url') and user_session.waha_instance_url:
+                self.logger.info(f"Using WAHA instance {user_session.waha_instance_url} for session {session_name}")
+                return WAHAClient(base_url=user_session.waha_instance_url)
+        
+        # Fallback to default client
+        self.logger.warning(f"No WAHA instance URL for session {session_name}, using default")
+        return self.waha
+    
     def _get_waha_session_name(self, session_name: str, user_id: str = None) -> str:
         """Convert display name to WAHA session name"""
         from database.user_sessions import UserWhatsAppSession
@@ -159,7 +180,9 @@ class GroupManager:
                 try:
                     # Convert display name to WAHA session name
                     waha_session_name = self._get_waha_session_name(session, user_id)
-                    groups = self.waha.get_groups(waha_session_name)
+                    # Get WAHA client for this session
+                    waha_client = self._get_waha_client_for_session(session, user_id)
+                    groups = waha_client.get_groups(waha_session_name)
                     if isinstance(groups, list):
                         group_ids = set()
                         for g in groups:
@@ -208,7 +231,9 @@ class GroupManager:
                     try:
                         # Convert display name to WAHA session name
                         waha_session_name = self._get_waha_session_name(session, user_id)
-                        info = self.waha.get_session_info(waha_session_name)
+                        # Get WAHA client for this session
+                        waha_client = self._get_waha_client_for_session(session, user_id)
+                        info = waha_client.get_session_info(waha_session_name)
                         if info and info.get("me"):
                             phone = info["me"].get("id", "")
                             if phone:
@@ -228,7 +253,9 @@ class GroupManager:
             self.logger.info(f"Creating group {group_name} with participants: {participant_phones}")
             # Convert orchestrator display name to WAHA session name
             waha_orchestrator = self._get_waha_session_name(orchestrator, user_id)
-            result = self.waha.create_group(waha_orchestrator, group_name, participant_phones)
+            # Get WAHA client for orchestrator session
+            waha_client = self._get_waha_client_for_session(orchestrator, user_id)
+            result = waha_client.create_group(waha_orchestrator, group_name, participant_phones)
             
             if result and "id" in result:
                 self.logger.info(f"Created group {group_name} with ID {result['id']}")
@@ -392,7 +419,9 @@ class GroupManager:
                         self.logger.info(f"Session {session} joining group {link_index + 1}")
                         # Convert display name to WAHA session name
                         waha_session_name = self._get_waha_session_name(session, user_id)
-                        result = self.waha.join_group_by_link(waha_session_name, invite_link)
+                        # Get WAHA client for this session
+                        waha_client = self._get_waha_client_for_session(session, user_id)
+                        result = waha_client.join_group_by_link(waha_session_name, invite_link)
                         
                         if result and "id" in result:
                             group_info["sessions_joined"].append(session)

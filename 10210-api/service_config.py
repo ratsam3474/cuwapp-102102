@@ -38,6 +38,12 @@ else:
     # WebSocket URLs
     WS_URL = 'wss://app.cuwapp.com'
 
+# WAHA Pool Configuration
+WAHA_MAX_SESSIONS_PER_INSTANCE = int(os.environ.get('WAHA_MAX_SESSIONS_PER_INSTANCE', '10'))  # Default 10 sessions per WAHA instance
+
+# WAHA Base URL - can be localhost, Docker machine IP, or domain
+WAHA_BASE_URL = os.environ.get('WAHA_BASE_URL', 'http://localhost')  # Change this to your Docker machine IP
+
 # CORS settings
 CORS_ORIGINS = [
     "https://www.cuwapp.com",

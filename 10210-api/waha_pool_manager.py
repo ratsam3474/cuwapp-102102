@@ -12,6 +12,13 @@ import os
 from typing import Dict, Optional, Tuple
 from datetime import datetime
 
+# Import config
+try:
+    from service_config import WAHA_MAX_SESSIONS_PER_INSTANCE, WAHA_BASE_URL
+except ImportError:
+    WAHA_MAX_SESSIONS_PER_INSTANCE = int(os.environ.get('WAHA_MAX_SESSIONS_PER_INSTANCE', '10'))
+    WAHA_BASE_URL = os.environ.get('WAHA_BASE_URL', 'http://localhost')  # Can be any IP/domain
+
 logger = logging.getLogger(__name__)
 
 class WAHAPoolManager:
@@ -25,10 +32,16 @@ class WAHAPoolManager:
             self.docker_available = False
         
         self.db_path = db_path
-        self.max_sessions_per_instance = 100
+        # Get from config or environment, default to 10
+        self.max_sessions_per_instance = WAHA_MAX_SESSIONS_PER_INSTANCE
+        logger.info(f"WAHA Pool: Max sessions per instance set to {self.max_sessions_per_instance}")
         self.base_port = 4500
         self.network_name = "cuwhapp-network"
-        self.free_instance_url = "http://localhost:4500"  # Instance 1 for free users
+        
+        # Get WAHA base URL from config/env (can be localhost, Docker IP, or domain)
+        self.waha_base_url = WAHA_BASE_URL
+        self.free_instance_url = f"{self.waha_base_url}:{self.base_port}"  # Instance 1 for free users
+        logger.info(f"WAHA Pool: Base URL set to {self.waha_base_url}")
         
     def get_db_connection(self):
         """Get database connection"""
@@ -137,27 +150,51 @@ class WAHAPoolManager:
     def create_instance_via_do_function(self) -> str:
         """Create WAHA instance via DigitalOcean Function"""
         try:
-            do_function_url = os.getenv("DO_WAHA_FUNCTION_URL")
-            docker_host = os.getenv("DOCKER_DROPLET_IP", "localhost")
+            # Use same DO function URL as user containers
+            do_function_url = os.getenv("DO_CONTAINER_FUNCTION_URL")
+            if not do_function_url:
+                # Fallback to old env var
+                do_function_url = os.getenv("DO_WAHA_FUNCTION_URL")
             
+            if not do_function_url:
+                logger.error("DO_CONTAINER_FUNCTION_URL not configured")
+                return self.free_instance_url
+            
+            # First check for available WAHA instance
             payload = {
-                "action": "create",
-                "docker_host": docker_host,
-                "image": "devlikeapro/waha-plus:latest",
-                "user_id": "pool",
-                "plan_type": "pro",
-                "max_sessions": 100
+                "action": "find_available_waha",
+                "sessions_needed": 10  # Buffer for new sessions
             }
             
-            logger.info("Creating WAHA instance via DO Function...")
+            logger.info("Checking for available WAHA instance via DO Function...")
             response = requests.post(do_function_url, json=payload, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
-                if result.get("body", {}).get("success"):
-                    instance = result["body"]["instance"]
-                    endpoint = instance["endpoint"]
-                    port = instance["port"]
+                body = result.get("body", result)
+                if body.get("success"):
+                    # Found available instance
+                    instance = body.get("instance", {})
+                    endpoint = instance.get("endpoint")
+                    logger.info(f"Found available WAHA instance: {endpoint}")
+                    return endpoint
+            
+            # No available instance, create new one
+            payload = {
+                "action": "create_waha",  # Routes to WAHA VM
+                "max_sessions": self.max_sessions_per_instance
+            }
+            
+            logger.info("Creating new WAHA instance via DO Function...")
+            response = requests.post(do_function_url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                body = result.get("body", result)
+                if body.get("success"):
+                    instance = body.get("instance", {})
+                    endpoint = instance.get("endpoint")
+                    port = instance.get("port")
                     
                     # Save to database
                     conn = self.get_db_connection()
@@ -241,7 +278,7 @@ class WAHAPoolManager:
                 restart_policy={"Name": "unless-stopped"}
             )
             
-            url = f"http://localhost:{port}"
+            url = f"{self.waha_base_url}:{port}"
             
             # Save to database
             cursor.execute("""

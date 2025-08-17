@@ -53,6 +53,10 @@ class WarmerSession(Base):
     total_direct_messages = Column(Integer, default=0)
     total_duration_minutes = Column(Float, default=0.0)  # Cumulative duration across all sessions
     
+    # Archive flag - soft delete for analytics preservation
+    is_archived = Column(Boolean, default=False, index=True)  # True = deleted but kept for analytics
+    archived_at = Column(DateTime)  # When it was archived
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime)

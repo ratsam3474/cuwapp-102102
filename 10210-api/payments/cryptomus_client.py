@@ -21,23 +21,22 @@ class CryptomusClient:
     def __init__(self):
         self.api_key = os.getenv("CRYPTOMUS_API_KEY", "your_api_key")
         self.merchant_id = os.getenv("CRYPTOMUS_MERCHANT_ID", "your_merchant_id")
-        self.api_secret = os.getenv("CRYPTOMUS_API_SECRET", "your_api_secret")
+        # Cryptomus uses the API key for signing
+        self.api_secret = os.getenv("CRYPTOMUS_API_KEY", "your_api_key")  # Use API key as secret
         self.base_url = "https://api.cryptomus.com/v1"
         
     def _generate_signature(self, data: Dict[str, Any]) -> str:
-        """Generate HMAC signature for Cryptomus API"""
-        # Sort data by keys
-        sorted_data = dict(sorted(data.items()))
-        # Create JSON string
-        json_str = json.dumps(sorted_data, separators=(',', ':'))
-        # Generate HMAC SHA256
-        signature = hmac.new(
-            self.api_secret.encode(),
-            json_str.encode(),
-            hashlib.sha256
-        ).digest()
-        # Return base64 encoded signature
-        return base64.b64encode(signature).decode()
+        """Generate signature for Cryptomus API"""
+        # Create JSON string without sorting (Cryptomus specific)
+        json_str = json.dumps(data, separators=(',', ':'), ensure_ascii=False)
+        
+        # According to Cryptomus docs: md5(base64_encode(json_body) + API_KEY)
+        # Step 1: Encode JSON body in base64
+        body_base64 = base64.b64encode(json_str.encode()).decode()
+        
+        # Step 2: Concatenate with API key and MD5 hash (return as hex, not base64!)
+        signature = hashlib.md5((body_base64 + self.api_key).encode()).hexdigest()
+        return signature
     
     def create_invoice(
         self,
@@ -95,7 +94,7 @@ class CryptomusClient:
             # Make API request
             response = requests.post(
                 f"{self.base_url}/payment",
-                json=data,
+                data=json.dumps(data, separators=(",", ":")),
                 headers=headers,
                 timeout=10
             )
@@ -156,7 +155,7 @@ class CryptomusClient:
             
             response = requests.post(
                 f"{self.base_url}/payment/info",
-                json=data,
+                data=json.dumps(data, separators=(",", ":")),
                 headers=headers,
                 timeout=10
             )

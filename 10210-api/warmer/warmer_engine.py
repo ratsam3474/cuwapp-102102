@@ -54,7 +54,7 @@ class WarmerEngine:
             
             # Verify all sessions are working
             for session in all_sessions:
-                if not await self._verify_session(session):
+                if not await self._verify_session(session, user_id):
                     raise ValueError(f"Session '{session}' is not available or not working")
             
             # Create warmer session in database
@@ -308,19 +308,41 @@ class WarmerEngine:
                 group_id=group_id
             )
             
-            # Get WAHA session name and send message
+            # Get warmer session to find user_id
             from database.user_sessions import UserWhatsAppSession
             
-            waha_session_name = speaker
             with get_db() as db:
+                warmer = db.query(WarmerSession).filter(
+                    WarmerSession.id == warmer_session_id
+                ).first()
+                
+                if not warmer or not warmer.user_id:
+                    self.logger.error(f"Warmer session {warmer_session_id} not found or missing user_id")
+                    return
+                
+                # Get the user's WhatsApp session and WAHA instance URL
                 user_session = db.query(UserWhatsAppSession).filter(
+                    UserWhatsAppSession.user_id == warmer.user_id,
                     UserWhatsAppSession.session_name == speaker
                 ).first()
-                if user_session and user_session.waha_session_name:
-                    waha_session_name = user_session.waha_session_name
+                
+                if not user_session:
+                    self.logger.error(f"User session {speaker} not found for user {warmer.user_id}")
+                    return
+                
+                # Use the session's WAHA instance URL if available
+                if hasattr(user_session, 'waha_instance_url') and user_session.waha_instance_url:
+                    waha_client = WAHAClient(base_url=user_session.waha_instance_url)
+                else:
+                    # Fallback to default WAHA client
+                    waha_client = self.waha
+                    self.logger.warning(f"No WAHA instance URL for session {speaker}, using default")
+                
+                # Use WAHA session name if available
+                waha_session_name = user_session.waha_session_name if user_session.waha_session_name else speaker
             
             # Send message via WAHA
-            result = self.waha.send_text(waha_session_name, group_id, message)
+            result = waha_client.send_text(waha_session_name, group_id, message)
             
             if result and "id" in result:
                 # Extract message ID from nested structure
@@ -368,6 +390,10 @@ class WarmerEngine:
                 if not warmer or len(warmer.all_sessions) < 2:
                     return
                 
+                if not warmer.user_id:
+                    self.logger.error(f"Warmer session {warmer_session_id} missing user_id")
+                    return
+                
                 # Choose sender and recipient
                 sessions = warmer.all_sessions
                 sender = random.choice(sessions)
@@ -389,20 +415,33 @@ class WarmerEngine:
                 recipient_session=recipient
             )
             
-            # Get WAHA session name
+            # Get the sender's WAHA instance and session name
             from database.user_sessions import UserWhatsAppSession
             
-            waha_session_name = sender
             with get_db() as db:
                 user_session = db.query(UserWhatsAppSession).filter(
+                    UserWhatsAppSession.user_id == warmer.user_id,
                     UserWhatsAppSession.session_name == sender
                 ).first()
-                if user_session and user_session.waha_session_name:
-                    waha_session_name = user_session.waha_session_name
+                
+                if not user_session:
+                    self.logger.error(f"User session {sender} not found for user {warmer.user_id}")
+                    return
+                
+                # Use the session's WAHA instance URL if available
+                if hasattr(user_session, 'waha_instance_url') and user_session.waha_instance_url:
+                    waha_client = WAHAClient(base_url=user_session.waha_instance_url)
+                else:
+                    # Fallback to default WAHA client
+                    waha_client = self.waha
+                    self.logger.warning(f"No WAHA instance URL for session {sender}, using default")
+                
+                # Use WAHA session name if available
+                waha_session_name = user_session.waha_session_name if user_session.waha_session_name else sender
             
             # Send message via WAHA
             chat_id = f"{recipient_phone}@c.us"
-            result = self.waha.send_text(waha_session_name, chat_id, message)
+            result = waha_client.send_text(waha_session_name, chat_id, message)
             
             if result and "id" in result:
                 # Extract message ID from nested structure
@@ -417,6 +456,7 @@ class WarmerEngine:
                 recipient_name = recipient_info.get(recipient, {}).get("name", recipient)
                 
                 # Save the contact with the proper name (use WAHA session name)
+                # Note: contact_manager might also need to use session-specific WAHA client
                 await self.contact_manager.save_contact_after_message(
                     session_name=waha_session_name,
                     chat_id=chat_id,
@@ -506,21 +546,33 @@ class WarmerEngine:
             self.logger.error(f"Error checking time limit: {str(e)}")
             return False
     
-    async def _verify_session(self, session_name: str) -> bool:
+    async def _verify_session(self, session_name: str, user_id: str = None) -> bool:
         """Verify if a session is working"""
         try:
-            # Get the WAHA session name if this is a display name
+            # Get the WAHA session name and instance URL
             from database.user_sessions import UserWhatsAppSession
             
             waha_session_name = session_name
-            with get_db() as db:
-                user_session = db.query(UserWhatsAppSession).filter(
-                    UserWhatsAppSession.session_name == session_name
-                ).first()
-                if user_session and user_session.waha_session_name:
-                    waha_session_name = user_session.waha_session_name
+            waha_client = self.waha  # Default client
             
-            sessions = self.waha.get_sessions()
+            with get_db() as db:
+                query = db.query(UserWhatsAppSession).filter(
+                    UserWhatsAppSession.session_name == session_name
+                )
+                if user_id:
+                    query = query.filter(UserWhatsAppSession.user_id == user_id)
+                
+                user_session = query.first()
+                if user_session:
+                    if user_session.waha_session_name:
+                        waha_session_name = user_session.waha_session_name
+                    
+                    # Use session-specific WAHA instance if available
+                    if hasattr(user_session, 'waha_instance_url') and user_session.waha_instance_url:
+                        waha_client = WAHAClient(base_url=user_session.waha_instance_url)
+            
+            # Check session status on the correct WAHA instance
+            sessions = waha_client.get_sessions()
             for session in sessions:
                 if session.get("name") == waha_session_name:
                     return session.get("status") == "WORKING"
@@ -558,11 +610,18 @@ class WarmerEngine:
             self.logger.error(f"Failed to get warmer status: {str(e)}")
             return {"error": str(e)}
     
-    def get_all_warmers(self) -> List[Dict[str, Any]]:
-        """Get all warmer sessions"""
+    def get_all_warmers(self, exclude_archived: bool = False) -> List[Dict[str, Any]]:
+        """Get all warmer sessions, optionally excluding archived ones"""
         try:
             with get_db() as db:
-                warmers = db.query(WarmerSession).all()
+                query = db.query(WarmerSession)
+                if exclude_archived:
+                    # Exclude archived warmers from main list
+                    query = query.filter(
+                        (WarmerSession.is_archived == False) | 
+                        (WarmerSession.is_archived == None)
+                    )
+                warmers = query.all()
                 return [
                     {
                         **warmer.to_dict(),

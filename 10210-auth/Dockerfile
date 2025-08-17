@@ -17,5 +17,5 @@ RUN npm run build
 # Expose port
 EXPOSE 5502
 
-# Start production server
-CMD ["npm", "start"]
+# Start production server on port 5502
+CMD ["npm", "run", "start", "--", "-p", "5502"]

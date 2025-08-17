@@ -1,3 +1,21 @@
+// Helper function to get dynamic URL for API calls
+function getDynamicUrl(endpoint) {
+    const infrastructure = JSON.parse(localStorage.getItem('user_infrastructure') || '{}');
+    let baseUrl = '';
+    
+    // Determine which service URL to use based on endpoint
+    if (endpoint.includes('/api/warmer')) {
+        baseUrl = sessionStorage.getItem('WARMER_URL') || infrastructure.warmerUrl || '';
+    } else if (endpoint.includes('/api/campaign')) {
+        baseUrl = sessionStorage.getItem('CAMPAIGN_URL') || infrastructure.campaignUrl || '';
+    } else {
+        baseUrl = sessionStorage.getItem('API_URL') || infrastructure.apiUrl || '';
+    }
+    
+    // Return full URL if we have baseUrl, otherwise return relative URL
+    return baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+}
+
 // WhatsApp Agent Frontend Application
 class WhatsAppAgent {
     constructor() {
@@ -943,7 +961,12 @@ class WhatsAppAgent {
         formData.append('file', file);
         
         try {
-            const response = await fetch('/api/files/upload', {
+            // Get dynamic URL
+            const infrastructure = JSON.parse(localStorage.getItem('user_infrastructure') || '{}');
+            const baseUrl = sessionStorage.getItem('API_URL') || infrastructure.apiUrl || '';
+            const uploadUrl = baseUrl ? `${baseUrl}/api/files/upload` : '/api/files/upload';
+            
+            const response = await fetch(uploadUrl, {
                 method: 'POST',
                 body: formData
             });
@@ -1488,7 +1511,12 @@ class WhatsAppAgent {
             console.log('Campaign payload:', JSON.stringify(payload, null, 2));  // Debug log
             
             // Create campaign using the new endpoint
-            const response = await fetch('/api/campaigns/create-with-source', {
+            // Get dynamic URL
+            const infrastructure = JSON.parse(localStorage.getItem('user_infrastructure') || '{}');
+            const baseUrl = sessionStorage.getItem('API_URL') || infrastructure.apiUrl || '';
+            const campaignUrl = baseUrl ? `${baseUrl}/api/campaigns/create-with-source` : '/api/campaigns/create-with-source';
+            
+            const response = await fetch(campaignUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -2236,11 +2264,60 @@ class WhatsAppAgent {
     
     async apiCall(endpoint, options = {}) {
         try {
-            // Add user_id to the URL if available and not already present
+            // SECURITY: Check if user is logged in for protected endpoints
+            const protectedEndpoints = [
+                '/api/sessions', '/api/campaigns', '/api/warmer', 
+                '/api/groups', '/api/contacts', '/api/metrics', 
+                '/analytics', '/api/users/subscription'
+            ];
+            
+            const requiresAuth = protectedEndpoints.some(path => endpoint.includes(path));
+            
+            if (requiresAuth && !this.userId) {
+                // Try to get user from cache
+                const user = UserCache.getUser();
+                if (user && user.id) {
+                    this.userId = user.id;
+                } else {
+                    // Show login prompt instead of error
+                    this.showToast('Please sign in to continue', 'warning');
+                    // Redirect to sign in after short delay
+                    setTimeout(() => {
+                        window.location.href = '/?signin=true';
+                    }, 1500);
+                    throw new Error('Authentication required');
+                }
+            }
+            
+            // === DYNAMIC URL SUPPORT ===
+            // Get user's container URLs from storage (set by API Gateway)
+            let baseUrl = '';
+            const infrastructure = JSON.parse(localStorage.getItem('user_infrastructure') || '{}');
+            
+            // Determine which service URL to use based on endpoint
+            if (endpoint.includes('/api/warmer')) {
+                baseUrl = sessionStorage.getItem('WARMER_URL') || infrastructure.warmerUrl || '';
+            } else if (endpoint.includes('/api/campaign')) {
+                baseUrl = sessionStorage.getItem('CAMPAIGN_URL') || infrastructure.campaignUrl || '';
+            } else {
+                baseUrl = sessionStorage.getItem('API_URL') || infrastructure.apiUrl || '';
+            }
+            
+            // Build full URL - if we have a baseUrl, use it; otherwise use relative URL
             let url = endpoint;
-            if (this.userId && !endpoint.includes('user_id=')) {
-                const separator = endpoint.includes('?') ? '&' : '?';
-                url = `${endpoint}${separator}user_id=${this.userId}`;
+            if (baseUrl) {
+                // Remove leading slash from endpoint if present
+                const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+                url = `${baseUrl}/${cleanEndpoint}`;
+            }
+            
+            // OLD CODE (commented for backup):
+            // let url = endpoint;
+            
+            // Add user_id to the URL if available and not already present
+            if (this.userId && !url.includes('user_id=')) {
+                const separator = url.includes('?') ? '&' : '?';
+                url = `${url}${separator}user_id=${this.userId}`;
             }
             
             const response = await fetch(url, {
@@ -2814,34 +2891,51 @@ class WhatsAppAgent {
                     <div class="card session-card">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
-                                <h6 class="card-title mb-0">
-                                    <i class="bi bi-phone me-2"></i>${session.name}
-                                </h6>
+                                <div>
+                                    <h6 class="card-title mb-0">
+                                        <i class="bi bi-phone me-2"></i>${session.name}
+                                    </h6>
+                                    ${session.me && session.me.id ? `
+                                        <small class="text-muted">
+                                            <i class="bi bi-telephone"></i> ${session.me.id.replace('@c.us', '')}
+                                        </small>
+                                    ` : ''}
+                                </div>
                                 <span class="session-status ${statusClass}">
                                     ${session.status}
                                 </span>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="btn-group btn-group-sm">
+                            <div class="session-actions">
+                                <div class="btn-group btn-group-sm mb-2">
                                     ${session.status === 'WORKING' ? `
-                                        <button class="btn btn-outline-success btn-sm" onclick="app.stopSession('${session.name}')">
+                                        <button class="btn btn-outline-success btn-sm" onclick="app.stopSession('${session.name}')" title="Stop">
                                             <i class="bi bi-stop-fill"></i>
                                         </button>
                                     ` : session.status === 'STOPPED' ? `
-                                        <button class="btn btn-outline-primary btn-sm" onclick="app.startSession('${session.name}')">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="app.startSession('${session.name}')" title="Start">
                                             <i class="bi bi-play-fill"></i>
                                         </button>
                                     ` : ''}
-                                    <button class="btn btn-outline-warning btn-sm" onclick="app.restartSession('${session.name}')">
-                                        <i class="bi bi-arrow-clockwise"></i>
+                                    
+                                    <!-- LOGOUT BUTTON - Always visible -->
+                                    <button class="btn btn-outline-warning btn-sm" onclick="app.logoutSession('${session.name}')" title="Logout WhatsApp">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
                                     </button>
-                                    <button class="btn btn-outline-danger btn-sm" onclick="app.deleteSession('${session.name}')">
+                                    
+                                    <button class="btn btn-outline-danger btn-sm" onclick="app.deleteSession('${session.name}')" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                                 
-                                <!-- ✅ UPDATED: Screenshot available for WORKING and SCAN_QR_CODE -->
+                                <!-- Login with Code button for QR state -->
+                                ${session.status === 'SCAN_QR_CODE' ? `
+                                    <button class="btn btn-sm btn-secondary" onclick="app.loginWithCode('${session.name}')" title="Login with Code">
+                                        <i class="bi bi-123"></i> Use Code
+                                    </button>
+                                ` : ''}
+                                
+                                <!-- Screenshot button -->
                                 ${session.status === 'WORKING' || session.status === 'SCAN_QR_CODE' ? `
                                     <button class="btn btn-sm btn-info" onclick="app.getScreenshot('${session.name}')" 
                                             title="${session.status === 'SCAN_QR_CODE' ? 'Capture QR Code' : 'Take Screenshot'}">
@@ -2900,6 +2994,32 @@ class WhatsAppAgent {
 
         console.log('Creating session with user ID:', this.userId);
 
+        // First check existing session names
+        try {
+            const namesResponse = await this.apiCall(`/api/sessions/names?user_id=${this.userId}`);
+            if (namesResponse.success && namesResponse.session_names) {
+                const existingNames = namesResponse.session_names;
+                if (existingNames.includes(sessionName)) {
+                    // Show error with existing names
+                    const namesList = existingNames.join(', ');
+                    this.showToast(`Session name '${sessionName}' already exists! Your existing sessions: ${namesList}`, 'error');
+                    
+                    // Suggest alternative name
+                    let counter = 2;
+                    let suggestedName = `${sessionName}_${counter}`;
+                    while (existingNames.includes(suggestedName)) {
+                        counter++;
+                        suggestedName = `${sessionName}_${counter}`;
+                    }
+                    document.getElementById('session-name').value = suggestedName;
+                    this.showToast(`Try: ${suggestedName}`, 'info');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not check existing names:', error);
+        }
+
         try {
             const result = await this.apiCall('/api/sessions', {
                 method: 'POST',
@@ -2913,11 +3033,24 @@ class WhatsAppAgent {
                 this.startStatusPolling(sessionName);
                 this.loadSessions(); // Reload sessions list
             } else {
-                this.showToast(result.error || 'Failed to create session', 'error');
+                // Parse error message for better display
+                let errorMsg = result.error || 'Failed to create session';
+                if (errorMsg.includes('already exists')) {
+                    // Extract just the main error without SQL details
+                    errorMsg = errorMsg.split('.')[0] + '.';
+                }
+                this.showToast(errorMsg, 'error');
             }
         } catch (error) {
             console.error('Session creation error:', error);
-            this.showToast(error.message || 'Failed to create session', 'error');
+            // Clean up error message
+            let errorMsg = error.message || 'Failed to create session';
+            if (errorMsg.includes('already exists')) {
+                errorMsg = errorMsg.split('.')[0] + '.';
+            } else if (errorMsg.includes('UNIQUE constraint')) {
+                errorMsg = `Session name '${sessionName}' already exists. Please choose a different name.`;
+            }
+            this.showToast(errorMsg, 'error');
         }
     }
 
@@ -3023,21 +3156,264 @@ class WhatsAppAgent {
         }
     }
 
-    async getScreenshot(sessionName) {
+    async logoutSession(sessionName) {
+        if (!confirm(`Are you sure you want to logout from WhatsApp on "${sessionName}"? You'll need to scan QR code again.`)) {
+            return;
+        }
+
         try {
-            // Add user_id to the request
-            const url = this.userId 
-                ? `/api/sessions/${sessionName}/screenshot?user_id=${this.userId}`
-                : `/api/sessions/${sessionName}/screenshot`;
-            const response = await fetch(url);
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
+            await this.apiCall(`/api/sessions/${sessionName}/logout`, { method: 'POST' });
+            this.showToast('Logged out from WhatsApp', 'success');
+            setTimeout(() => this.loadSessions(), 1000);
+        } catch (error) {
+            this.showToast('Failed to logout', 'error');
+        }
+    }
+
+    async loginWithCode(sessionName) {
+        // Create modal for authentication code process
+        const modalHtml = `
+            <div class="modal fade" id="loginCodeModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Login with Authentication Code</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="codeStep1">
+                                <p><strong>Enter Your Phone Number</strong></p>
+                                <p>Enter your WhatsApp phone number to generate a pairing code.</p>
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phoneNumberInput" 
+                                           placeholder="17024215458" required>
+                                    <small class="text-muted">Enter phone with country code (e.g., 1 for USA, 44 for UK)</small>
+                                </div>
+                                <button type="button" class="btn btn-primary w-100" onclick="app.requestAuthCode('${sessionName}')">
+                                    <i class="bi bi-phone"></i> Generate Pairing Code
+                                </button>
+                            </div>
+                            
+                            <div id="codeStep2" style="display: none;">
+                                <div class="alert alert-success">
+                                    <h5 class="alert-heading">Pairing Code Generated!</h5>
+                                    <hr>
+                                    <p class="mb-2"><strong>Enter this code in WhatsApp:</strong></p>
+                                    <h2 class="text-center my-3" id="pairingCodeDisplay" style="font-family: monospace; letter-spacing: 0.3em;"></h2>
+                                </div>
+                                <div class="mt-3">
+                                    <p><strong>How to use this code:</strong></p>
+                                    <ol class="small">
+                                        <li>Open WhatsApp on your phone</li>
+                                        <li>Go to Settings → Linked Devices</li>
+                                        <li>Tap "Link a Device"</li>
+                                        <li>Choose "Link with phone number instead"</li>
+                                        <li>Enter the code shown above</li>
+                                    </ol>
+                                </div>
+                                <button type="button" class="btn btn-secondary w-100 mt-3" 
+                                        onclick="app.requestAuthCode('${sessionName}')">
+                                    <i class="bi bi-arrow-clockwise"></i> Generate New Code
+                                </button>
+                            </div>
+                            
+                            <div id="codeLoading" style="display: none;" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Processing...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('loginCodeModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('loginCodeModal'));
+        modal.show();
+
+        // Format input as user types
+        document.getElementById('pairingCode').addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 4) {
+                value = value.slice(0, 4) + '-' + value.slice(4, 8);
+            }
+            e.target.value = value;
+        });
+    }
+
+    async requestAuthCode(sessionName) {
+        // Show loading
+        document.getElementById('codeStep1').style.display = 'none';
+        document.getElementById('codeLoading').style.display = 'block';
+
+        try {
+            // Get phone number from input
+            const phoneInput = document.getElementById('phoneNumberInput');
+            let phoneNumber = phoneInput ? phoneInput.value.trim() : '';
+            
+            if (!phoneNumber) {
+                this.showToast('Please enter your phone number', 'warning');
+                document.getElementById('codeStep1').style.display = 'block';
+                document.getElementById('codeLoading').style.display = 'none';
+                return;
+            }
+            
+            // Clean phone number - remove any non-digits
+            phoneNumber = phoneNumber.replace(/\D/g, '');
+            
+            // Validate it's a reasonable phone number (at least 10 digits)
+            if (phoneNumber.length < 10) {
+                this.showToast('Please enter a valid phone number with country code', 'warning');
+                document.getElementById('codeStep1').style.display = 'block';
+                document.getElementById('codeLoading').style.display = 'none';
+                return;
+            }
+
+            // Request the pairing code through our API
+            const result = await this.apiCall(`/api/sessions/${sessionName}/auth/request-code`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    phoneNumber: phoneNumber
+                })
+            });
+
+            if (result && result.success && result.code) {
+                // Display the pairing code
+                document.getElementById('pairingCodeDisplay').textContent = result.code;
+                document.getElementById('codeLoading').style.display = 'none';
+                document.getElementById('codeStep2').style.display = 'block';
+                this.showToast('Pairing code generated! Enter it in WhatsApp.', 'success');
+                
+                // Start checking session status
+                this.startSessionStatusCheck(sessionName);
+            } else {
+                this.showToast(result.error || 'Failed to send code', 'error');
+                document.getElementById('codeLoading').style.display = 'none';
+                document.getElementById('codeStep1').style.display = 'block';
             }
         } catch (error) {
+            console.error('Error requesting code:', error);
+            this.showToast('Failed to request authentication code', 'error');
+            document.getElementById('codeLoading').style.display = 'none';
+            document.getElementById('codeStep1').style.display = 'block';
+        }
+    }
+
+    startSessionStatusCheck(sessionName) {
+        // Check session status every 3 seconds
+        this.statusCheckInterval = setInterval(async () => {
+            try {
+                const result = await this.apiCall(`/api/sessions/${sessionName}`);
+                if (result && result.data && result.data.status === 'WORKING') {
+                    // Session is now connected!
+                    clearInterval(this.statusCheckInterval);
+                    this.showToast('WhatsApp connected successfully!', 'success');
+                    
+                    // Close modal
+                    const modal = document.getElementById('loginCodeModal');
+                    if (modal) {
+                        const modalInstance = bootstrap.Modal.getInstance(modal);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    
+                    // Reload sessions
+                    this.loadSessions();
+                }
+            } catch (error) {
+                console.error('Error checking session status:', error);
+            }
+        }, 3000);
+        
+        // Stop checking after 2 minutes
+        setTimeout(() => {
+            if (this.statusCheckInterval) {
+                clearInterval(this.statusCheckInterval);
+                this.showToast('Pairing code expired. Please generate a new one.', 'warning');
+            }
+        }, 120000);
+    }
+
+    async getScreenshot(sessionName) {
+        try {
+            // Show loading toast
+            this.showToast('Capturing screenshot...', 'info');
+            
+            // Get the screenshot
+            const url = `/api/sessions/${sessionName}/screenshot` + 
+                       (this.userId ? `?user_id=${this.userId}` : '');
+            
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                
+                // Create and show modal with screenshot
+                this.showScreenshotModal(sessionName, imageUrl);
+            } else {
+                this.showToast('Failed to capture screenshot', 'error');
+            }
+        } catch (error) {
+            console.error('Screenshot error:', error);
             this.showToast('Failed to get screenshot', 'error');
         }
+    }
+
+    showScreenshotModal(sessionName, imageUrl) {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal fade" id="screenshotModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Screenshot - ${sessionName}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${imageUrl}" class="img-fluid" alt="WhatsApp Screenshot" 
+                                 style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px;">
+                        </div>
+                        <div class="modal-footer">
+                            <a href="${imageUrl}" download="whatsapp_screenshot_${sessionName}_${Date.now()}.png" 
+                               class="btn btn-primary">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('screenshotModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
+        modal.show();
+
+        // Clean up blob URL when modal is closed
+        document.getElementById('screenshotModal').addEventListener('hidden.bs.modal', () => {
+            URL.revokeObjectURL(imageUrl);
+        });
     }
 
     // ==================== CHAT MANAGEMENT ====================
@@ -3190,13 +3566,82 @@ class WhatsAppAgent {
             return;
         }
 
+        // Show loading modal
+        const modal = new bootstrap.Modal(document.getElementById('contactsLoadingModal'));
+        modal.show();
+        
+        // Helper functions for updating stages
+        const updateStage = (stage, status) => {
+            const spinner = document.getElementById(`contacts-${stage}-spinner`);
+            const check = document.getElementById(`contacts-${stage}-check`);
+            
+            if (spinner && check) {
+                if (status === 'active') {
+                    spinner.classList.remove('d-none');
+                    check.classList.add('d-none');
+                } else if (status === 'complete') {
+                    spinner.classList.add('d-none');
+                    check.classList.remove('d-none');
+                }
+            }
+        };
+        
+        const updateProgress = (percent, text) => {
+            const progressBar = document.getElementById('contacts-progress-bar');
+            const progressText = document.getElementById('contacts-progress-text');
+            if (progressBar) {
+                progressBar.style.width = `${percent}%`;
+            }
+            if (progressText) {
+                progressText.textContent = text;
+            }
+        };
+
         try {
+            // Stage 1: Connecting
+            updateStage('connecting', 'active');
+            updateProgress(20, 'Connecting to session...');
+            
+            // Small delay for visual feedback
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Stage 2: Fetching
+            updateStage('connecting', 'complete');
+            updateStage('fetching', 'active');
+            updateProgress(50, 'Fetching contacts...');
+            
             const result = await this.apiCall(`/api/contacts/${session}`);
+            
+            // Stage 3: Processing
+            updateStage('fetching', 'complete');
+            updateStage('processing', 'active');
+            updateProgress(80, 'Processing contact data...');
+            
             if (result.success) {
+                // Update contact count
+                const countText = document.getElementById('contacts-count-text');
+                if (countText) {
+                    countText.textContent = `Found ${result.data.length} contacts`;
+                }
+                
+                // Complete
+                updateStage('processing', 'complete');
+                updateProgress(100, `Loaded ${result.data.length} contacts`);
+                
+                // Display contacts
                 this.displayContacts(result.data);
+                
+                // Close modal after a short delay
+                setTimeout(() => {
+                    modal.hide();
+                }, 1000);
+            } else {
+                throw new Error('Failed to load contacts');
             }
         } catch (error) {
+            console.error('Error loading contacts:', error);
             this.showToast('Failed to load contacts', 'error');
+            modal.hide();
         }
     }
 
@@ -3332,9 +3777,58 @@ class WhatsAppAgent {
             return;
         }
 
+        // Show loading modal
+        const modal = new bootstrap.Modal(document.getElementById('groupsLoadingModal'));
+        modal.show();
+        
+        // Helper functions for updating stages
+        const updateStage = (stage, status) => {
+            const spinner = document.getElementById(`groups-${stage}-spinner`);
+            const check = document.getElementById(`groups-${stage}-check`);
+            
+            if (spinner && check) {
+                if (status === 'active') {
+                    spinner.classList.remove('d-none');
+                    check.classList.add('d-none');
+                } else if (status === 'complete') {
+                    spinner.classList.add('d-none');
+                    check.classList.remove('d-none');
+                }
+            }
+        };
+        
+        const updateProgress = (percent, text) => {
+            const progressBar = document.getElementById('groups-progress-bar');
+            const progressText = document.getElementById('groups-progress-text');
+            if (progressBar) {
+                progressBar.style.width = `${percent}%`;
+            }
+            if (progressText) {
+                progressText.textContent = text;
+            }
+        };
+
         try {
+            // Stage 1: Connecting
+            updateStage('connecting', 'active');
+            updateProgress(20, 'Connecting to session...');
+            
+            // Small delay for visual feedback
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Stage 2: Fetching
+            updateStage('connecting', 'complete');
+            updateStage('fetching', 'active');
+            updateProgress(50, 'Fetching groups...');
+            
             // Load lightweight data first (no participants)
             const result = await this.apiCall(`/api/groups/${session}?lightweight=true`);
+            
+            // Stage 3: Processing
+            updateStage('fetching', 'complete');
+            updateStage('processing', 'active');
+            updateProgress(80, 'Processing group data...');
+            
             if (result.success) {
                 // Store groups data for later use
                 this.groupsData = result.data.map(group => ({
@@ -3346,10 +3840,25 @@ class WhatsAppAgent {
                     participants: null,
                     participantCount: null
                 }));
+                
+                // Complete
+                updateStage('processing', 'complete');
+                updateProgress(100, `Loaded ${this.groupsData.length} groups`);
+                
+                // Display groups
                 this.displayGroups(this.groupsData);
+                
+                // Close modal after a short delay
+                setTimeout(() => {
+                    modal.hide();
+                }, 1000);
+            } else {
+                throw new Error('Failed to load groups');
             }
         } catch (error) {
+            console.error('Error loading groups:', error);
             this.showToast('Failed to load groups', 'error');
+            modal.hide();
         }
     }
 
@@ -3954,29 +4463,187 @@ class WhatsAppAgent {
     
     async startWarmer(warmerId) {
         try {
-            // First check group status
+            // Show the startup modal
+            this.showWarmerStartupModal();
+            this.currentStartingWarmerId = warmerId;
+            
+            // Stage 1: Check configuration
+            this.updateWarmerStage('checking', 'active');
+            
+            // Check group status
             const groupCheck = await this.apiCall(`/api/warmer/${warmerId}/groups/check`);
             
+            this.updateWarmerStage('checking', 'complete');
+            
             if (!groupCheck.has_enough_groups) {
-                // Need more groups, show modal
+                // Stage 2: Join groups
+                this.updateWarmerStage('groups', 'active');
+                document.getElementById('groups-status').textContent = `Joining ${groupCheck.groups_needed} groups...`;
+                
+                // Auto-join groups if we have links
+                // For now, we'll need the user to provide group links
+                this.hideWarmerStartupModal();
                 this.showJoinGroupsModalForStart(warmerId, groupCheck);
-            } else {
-                // Have enough groups, start warmer directly
+                return;
+            }
+            
+            // Stage 2: Groups already joined
+            this.updateWarmerStage('groups', 'complete');
+            document.getElementById('groups-status').textContent = `${groupCheck.common_groups_count} groups ready`;
+            
+            // Stage 3: Save contacts
+            this.updateWarmerStage('contacts', 'active');
+            
+            // Stage 4: Start warmer
+            setTimeout(async () => {
+                this.updateWarmerStage('contacts', 'complete');
+                document.getElementById('contacts-status').textContent = 'Contacts saved';
+                
+                this.updateWarmerStage('starting', 'active');
+                
                 const response = await this.apiCall(`/api/warmer/${warmerId}/start`, {
                     method: 'POST'
                 });
                 
                 if (response.success) {
-                    this.showToast(response.message || 'Warmer started successfully', 'success');
-                    this.loadWarmerSessions();
+                    this.updateWarmerStage('starting', 'complete');
+                    document.getElementById('starting-status').textContent = 'Warmer started!';
+                    
+                    setTimeout(() => {
+                        this.hideWarmerStartupModal();
+                        this.showToast('Warmer started successfully!', 'success');
+                        this.loadWarmerSessions();
+                    }, 1500);
                 } else {
                     throw new Error(response.error || 'Failed to start warmer');
                 }
-            }
+            }, 1500);
+            
         } catch (error) {
             console.error('Error starting warmer:', error);
+            this.hideWarmerStartupModal();
             this.showToast('Failed to start warmer: ' + error.message, 'error');
         }
+    }
+    
+    showWarmerStartupModal() {
+        const modalElement = document.getElementById('warmerStartupModal');
+        if (!modalElement) {
+            console.error('Warmer startup modal not found');
+            return;
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        // Reset all stages
+        ['checking', 'groups', 'contacts', 'starting'].forEach(stage => {
+            const spinner = document.getElementById(`${stage}-spinner`);
+            const check = document.getElementById(`${stage}-check`);
+            const pending = document.getElementById(`${stage}-pending`);
+            
+            if (spinner) spinner.classList.add('d-none');
+            if (check) check.classList.add('d-none');
+            if (pending) pending.classList.remove('d-none');
+        });
+    }
+    
+    hideWarmerStartupModal() {
+        const modalEl = document.getElementById('warmerStartupModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+    }
+    
+    updateWarmerStage(stage, status) {
+        const spinner = document.getElementById(`${stage}-spinner`);
+        const check = document.getElementById(`${stage}-check`);
+        const pending = document.getElementById(`${stage}-pending`);
+        
+        if (!spinner || !check || !pending) {
+            console.error(`Missing elements for stage: ${stage}`);
+            return;
+        }
+        
+        if (status === 'active') {
+            spinner.classList.remove('d-none');
+            check.classList.add('d-none');
+            pending.classList.add('d-none');
+        } else if (status === 'complete') {
+            spinner.classList.add('d-none');
+            check.classList.remove('d-none');
+            pending.classList.add('d-none');
+        } else {
+            spinner.classList.add('d-none');
+            check.classList.add('d-none');
+            pending.classList.remove('d-none');
+        }
+    }
+    
+    async cancelWarmerStartup() {
+        if (!confirm('Are you sure you want to cancel the warmer startup?')) {
+            return;
+        }
+        
+        try {
+            if (this.currentStartingWarmerId) {
+                // Try to stop the warmer if it was partially started
+                await this.apiCall(`/api/warmer/${this.currentStartingWarmerId}/stop`, {
+                    method: 'POST'
+                });
+            }
+        } catch (error) {
+            console.error('Error stopping warmer:', error);
+        }
+        
+        this.hideWarmerStartupModal();
+        this.showToast('Warmer startup cancelled', 'info');
+        this.currentStartingWarmerId = null;
+    }
+    
+    async continueWarmerStartup(warmerId) {
+        // Called after groups are joined, continue with the startup process
+        this.showWarmerStartupModal();
+        
+        // Groups are now joined
+        this.updateWarmerStage('checking', 'complete');
+        this.updateWarmerStage('groups', 'complete');
+        document.getElementById('groups-status').textContent = '5 groups joined';
+        
+        // Stage 3: Save contacts
+        this.updateWarmerStage('contacts', 'active');
+        
+        setTimeout(async () => {
+            this.updateWarmerStage('contacts', 'complete');
+            document.getElementById('contacts-status').textContent = 'Contacts saved';
+            
+            // Stage 4: Start warmer
+            this.updateWarmerStage('starting', 'active');
+            
+            try {
+                const response = await this.apiCall(`/api/warmer/${warmerId}/start`, {
+                    method: 'POST'
+                });
+                
+                if (response.success) {
+                    this.updateWarmerStage('starting', 'complete');
+                    document.getElementById('starting-status').textContent = 'Warmer started!';
+                    
+                    setTimeout(() => {
+                        this.hideWarmerStartupModal();
+                        this.showToast('Warmer started successfully!', 'success');
+                        this.loadWarmerSessions();
+                    }, 1500);
+                } else {
+                    throw new Error(response.error || 'Failed to start warmer');
+                }
+            } catch (error) {
+                console.error('Error starting warmer:', error);
+                this.hideWarmerStartupModal();
+                this.showToast('Failed to start warmer: ' + error.message, 'error');
+            }
+        }, 1500);
     }
     
     async stopWarmer(warmerId) {
@@ -4462,21 +5129,12 @@ class WhatsAppAgent {
                 document.getElementById('join-groups-status').textContent = 'Successfully joined groups!';
                 
                 if (shouldStartAfter) {
-                    // Continue to start the warmer
-                    document.getElementById('join-groups-status').textContent = 'Starting warmer...';
-                    document.querySelector('#join-groups-progress .progress-bar').style.width = '75%';
+                    // Close the join groups modal
+                    bootstrap.Modal.getInstance(document.getElementById('joinGroupsModal')).hide();
                     
-                    const startResponse = await this.apiCall(`/api/warmer/${warmerId}/start`, {
-                        method: 'POST'
-                    });
-                    
-                    if (startResponse.success) {
-                        document.querySelector('#join-groups-progress .progress-bar').style.width = '100%';
-                        document.getElementById('join-groups-status').textContent = 'Warmer started successfully!';
-                        this.showToast('Groups joined and warmer started successfully!', 'success');
-                    } else {
-                        throw new Error(startResponse.error || 'Failed to start warmer after joining groups');
-                    }
+                    // Continue with the warmer startup process
+                    this.continueWarmerStartup(warmerId);
+                    return;
                 } else {
                     // Just joined groups
                     document.querySelector('#join-groups-progress .progress-bar').style.width = '100%';
@@ -4919,7 +5577,7 @@ async function startAllCampaigns() {
     }
     
     try {
-        const response = await fetch('/api/campaigns/start-all', {
+        const response = await fetch(getDynamicUrl('/api/campaigns/start-all'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -5045,7 +5703,7 @@ async function confirmScheduleCampaign(campaignId) {
     }
     
     try {
-        const response = await fetch('/api/campaigns/schedule', {
+        const response = await fetch(getDynamicUrl('/api/campaigns/schedule'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -5183,7 +5841,7 @@ async function confirmScheduleStartAll() {
     console.log('Schedule All - Stagger seconds:', staggerSeconds);
     
     try {
-        const response = await fetch('/api/campaigns/schedule-all', {
+        const response = await fetch(getDynamicUrl('/api/campaigns/schedule-all'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -5230,7 +5888,7 @@ async function stopAllCampaigns() {
     }
     
     try {
-        const response = await fetch('/api/campaigns/stop-all', {
+        const response = await fetch(getDynamicUrl('/api/campaigns/stop-all'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
